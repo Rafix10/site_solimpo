@@ -252,7 +252,7 @@
         color: #991b1b;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-ZXNk8tuc.js"></script>
+    <script type="module" crossorigin src="/assets/index-0JgqeVvK.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BRgxaNTN.css">
   </head>
   <body>
@@ -328,9 +328,15 @@
     // ==========================================
     function updatePriceDisplay() {
         // Skip if this is a per_sqm service (like vidros) - let React handle it
+        // Check for width/height inputs OR if we're in a service configuration step
         const widthInput = document.querySelector('input[name="width"]');
         const heightInput = document.querySelector('input[name="height"]');
-        if (widthInput || heightInput) {
+        const hasNumberInputs = document.querySelector('input[type="number"][placeholder*="Ex:"]');
+        const hasLarguraLabel = Array.from(document.querySelectorAll('label')).some(l =>
+            l.textContent.includes('Largura') || l.textContent.includes('Comprimento')
+        );
+
+        if (widthInput || heightInput || hasNumberInputs || hasLarguraLabel) {
             return; // This is a per_sqm service, don't interfere
         }
 
@@ -399,7 +405,12 @@
         // Skip if this is a per_sqm service
         const widthInput = document.querySelector('input[name="width"]');
         const heightInput = document.querySelector('input[name="height"]');
-        if (widthInput || heightInput) return;
+        const hasNumberInputs = document.querySelector('input[type="number"][placeholder*="Ex:"]');
+        const hasLarguraLabel = Array.from(document.querySelectorAll('label')).some(l =>
+            l.textContent.includes('Largura') || l.textContent.includes('Comprimento')
+        );
+
+        if (widthInput || heightInput || hasNumberInputs || hasLarguraLabel) return;
 
         const seatsContainer = document.querySelector('.space-y-2');
         if (!seatsContainer) return;
@@ -461,9 +472,15 @@
     // 4. ADD QUANTITY CONTROLS TO EXTRAS
     // ==========================================
     function addQuantityToExtras() {
+        // Skip if this is a per_sqm service
+        const hasLarguraLabel = Array.from(document.querySelectorAll('label')).some(l =>
+            l.textContent.includes('Largura') || l.textContent.includes('Comprimento')
+        );
+        if (hasLarguraLabel) return;
+
         const extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
         if (!extrasHeader) return;
-        
+
         const extrasContainer = extrasHeader.parentElement;
         if (!extrasContainer) return;
 
