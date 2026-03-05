@@ -5,8 +5,6 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Complete SofáLimpo Project Setup</title>
-    <script type="module" crossorigin src="/assets/index-Cgy6hsQO.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-C7bo5i_F.css">
     <style>
       /* Contact Form Overlay for "Outros" */
       .sl-contact-overlay {
@@ -254,6 +252,8 @@
         color: #991b1b;
       }
     </style>
+    <script type="module" crossorigin src="/assets/index-ZXNk8tuc.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BRgxaNTN.css">
   </head>
   <body>
     <div id="root"></div>
@@ -327,6 +327,13 @@
     // 2. PRICE DISPLAY UPDATE
     // ==========================================
     function updatePriceDisplay() {
+        // Skip if this is a per_sqm service (like vidros) - let React handle it
+        const widthInput = document.querySelector('input[name="width"]');
+        const heightInput = document.querySelector('input[name="height"]');
+        if (widthInput || heightInput) {
+            return; // This is a per_sqm service, don't interfere
+        }
+
         const quantitySpan = Array.from(document.querySelectorAll('span')).find(el => /^\d+$/.test(el.innerText) && el.className.includes('text-2xl'));
         if (!quantitySpan) return;
 
@@ -389,9 +396,14 @@
     // 3. SEATS NUMERIC CONTROL
     // ==========================================
     function transformSeatsToNumeric() {
+        // Skip if this is a per_sqm service
+        const widthInput = document.querySelector('input[name="width"]');
+        const heightInput = document.querySelector('input[name="height"]');
+        if (widthInput || heightInput) return;
+
         const seatsContainer = document.querySelector('.space-y-2');
         if (!seatsContainer) return;
-        
+
         const hasRadios = seatsContainer.querySelector('input[name="seats"]');
         if (!hasRadios) return;
         if (document.getElementById('custom-seats-control')) return;
