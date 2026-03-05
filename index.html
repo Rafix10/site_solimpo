@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Complete SofáLimpo Project Setup</title>
+    <script type="module" crossorigin src="/assets/index-Cgy6hsQO.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C7bo5i_F.css">
+    <style>
+      /* Contact Form Overlay for "Outros" */
+      .sl-contact-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: sl-fadeIn 0.3s ease;
+      }
+      @keyframes sl-fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .sl-contact-card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+        text-align: center;
+        position: relative;
+        animation: sl-slideUp 0.4s ease;
+      }
+      @keyframes sl-slideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .sl-contact-card .sl-close-btn {
+        position: absolute;
+        top: 16px; right: 16px;
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: #f3f4f6;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+      }
+      .sl-contact-card .sl-close-btn:hover { background: #e5e7eb; }
+      .sl-contact-card .sl-icon-circle {
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #deb052, #f5d78e);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 36px;
+      }
+      .sl-contact-card h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 8px;
+      }
+      .sl-contact-card .sl-subtitle {
+        color: #6b7280;
+        font-size: 0.95rem;
+        margin-bottom: 28px;
+        line-height: 1.5;
+      }
+      .sl-contact-methods {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .sl-contact-method {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 18px;
+        border-radius: 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        text-decoration: none;
+        color: #1a1a2e;
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+      .sl-contact-method:hover {
+        background: #f0f0f0;
+        border-color: #deb052;
+        transform: translateX(4px);
+      }
+      .sl-contact-method .sl-method-icon {
+        width: 44px; height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+      .sl-contact-method .sl-method-icon.phone { background: rgba(34,197,94,0.1); }
+      .sl-contact-method .sl-method-icon.whatsapp { background: rgba(37,211,102,0.1); }
+      .sl-contact-method .sl-method-icon.email { background: rgba(59,130,246,0.1); }
+      .sl-contact-method .sl-method-info { text-align: left; }
+      .sl-contact-method .sl-method-info .sl-method-label {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        font-weight: 500;
+      }
+      .sl-contact-method .sl-method-info .sl-method-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1a1a2e;
+      }
+      .sl-contact-card .sl-schedule {
+        margin-top: 20px;
+        padding: 14px;
+        background: linear-gradient(135deg, #1a1a2e, #2d2d44);
+        border-radius: 12px;
+        color: white;
+      }
+      .sl-contact-card .sl-schedule .sl-schedule-title {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.6);
+        margin-bottom: 6px;
+      }
+      .sl-contact-card .sl-schedule .sl-schedule-times {
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      /* Numeric quantity for extras */
+      .sl-extra-qty-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+      .sl-extra-qty-btn {
+        width: 26px; height: 26px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: #f9fafb;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        padding: 0;
+        line-height: 1;
+      }
+      .sl-extra-qty-btn:hover { background: #e5e7eb; border-color: #deb052; }
+      .sl-extra-qty-value {
+        min-width: 24px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #1a1a2e;
+      }
+
+      /* Admin seats pricing editor */
+      .sl-seats-editor {
+        background: #fffbeb;
+        border: 2px solid #deb052;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 16px;
+        margin-bottom: 8px;
+      }
+      .sl-seats-editor h4 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .sl-seats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
+      }
+      .sl-seat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .sl-seat-item label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #6b7280;
+      }
+      .sl-seat-item input {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+      }
+      .sl-seat-item input:focus {
+        outline: none;
+        border-color: #deb052;
+        box-shadow: 0 0 0 2px rgba(222,176,82,0.2);
+      }
+      .sl-seats-save-btn {
+        margin-top: 14px;
+        padding: 10px 24px;
+        background: linear-gradient(135deg, #deb052, #c9982e);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        width: 100%;
+      }
+      .sl-seats-save-btn:hover {
+        background: linear-gradient(135deg, #c9982e, #b8871e);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(222,176,82,0.3);
+      }
+      .sl-seats-status {
+        margin-top: 8px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-align: center;
+        display: none;
+      }
+      .sl-seats-status.success {
+        display: block;
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .sl-seats-status.error {
+        display: block;
+        background: #fee2e2;
+        color: #991b1b;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+  
+<script>
+(function() {
+    console.log("SofáLimpo Customização v3.0 - Ativado");
+    
+    // ==========================================
+    // SUPABASE CONFIG
+    // ==========================================
+    const SUPABASE_URL = 'https://xctdeqkazwdaxhgtyqoo.supabase.co';
+    const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjdGRlcWthendkYXhoZ3R5cW9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwMTg3NjIsImV4cCI6MjA1OTU5NDc2Mn0.s639u_g8KDze-bib_BLFa2f1tECsqJxvPHahCeosa6Q';
+
+    function getAuthToken() {
+        try {
+            const keys = Object.keys(localStorage).filter(k => k.includes('supabase') && k.includes('auth'));
+            for (const key of keys) {
+                const data = JSON.parse(localStorage.getItem(key) || '{}');
+                if (data.access_token) return data.access_token;
+                if (data.currentSession?.access_token) return data.currentSession.access_token;
+            }
+        } catch(e) {}
+        return null;
+    }
+
+    // ==========================================
+    // PRICING RULES (loaded from Supabase)
+    // ==========================================
+    let PRICING_RULES = {
+        'sofa': {
+            'base': 71.00,
+            'seats': { '2': 71.00, '3': 81.00, '4': 91.00, '5': 99.00, '6': 109.00 }
+        },
+        'colchao': { 'solteiro': 50.00, 'casal': 74.00 }
+    };
+
+    // Load latest pricing from Supabase
+    async function loadPricingFromSupabase() {
+        try {
+            const resp = await fetch(`${SUPABASE_URL}/rest/v1/services?type=eq.sofa&select=pricing_rules`, {
+                headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
+            });
+            const data = await resp.json();
+            if (data.length > 0 && data[0].pricing_rules?.prices_by_seats) {
+                PRICING_RULES.sofa.seats = data[0].pricing_rules.prices_by_seats;
+                PRICING_RULES.sofa.base = data[0].pricing_rules.base_price || 71;
+                console.log("Pricing loaded from Supabase:", PRICING_RULES.sofa.seats);
+            }
+        } catch(e) {
+            console.log("Using default pricing rules");
+        }
+    }
+    loadPricingFromSupabase();
+
+    // ==========================================
+    // EXTRAS THAT NEED QUANTITY SELECTOR
+    // ==========================================
+    const QUANTITY_EXTRAS = ['almofadas', 'puffs', 'puffs_xl', 'puffs xl', 'bancos'];
+    const extraQuantities = {};
+
+    // ==========================================
+    // 1. REMOVE OLD INJECTED SOFÁ CAMA
+    // ==========================================
+    function removeOldSofaCama() {
+        const old = document.getElementById('extra-sofa-cama');
+        if (old) old.remove();
+    }
+
+    // ==========================================
+    // 2. PRICE DISPLAY UPDATE
+    // ==========================================
+    function updatePriceDisplay() {
+        const quantitySpan = Array.from(document.querySelectorAll('span')).find(el => /^\d+$/.test(el.innerText) && el.className.includes('text-2xl'));
+        if (!quantitySpan) return;
+
+        const quantity = parseInt(quantitySpan.innerText);
+        let basePrice = 0;
+        let extrasTotal = 0;
+
+        const selectedSize = document.querySelector('input[name="size"]:checked');
+        if (selectedSize) {
+            basePrice = selectedSize.value === 'casal' ? PRICING_RULES.colchao.casal : PRICING_RULES.colchao.solteiro;
+        }
+
+        const seatsSpan = document.getElementById('custom-seats-value');
+        if (seatsSpan) {
+            const seats = seatsSpan.innerText;
+            basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
+        }
+
+        document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+            const label = cb.closest('label') || cb.parentElement;
+            if (!label) return;
+            const container = label.closest('.flex.items-start') || label.closest('[class*="hover:bg-gray"]') || label.parentElement;
+            const labelText = (container ? container.innerText : label.innerText).toLowerCase();
+            
+            const match = labelText.match(/\+(\d+(?:[.,]\d+)?)\s*€/);
+            if (match) {
+                let extraPrice = parseFloat(match[1].replace(',', '.'));
+                const qtyValueEl = container ? container.querySelector('.sl-extra-qty-value') : null;
+                if (qtyValueEl) {
+                    const qty = parseInt(qtyValueEl.textContent) || 1;
+                    extrasTotal += extraPrice * qty;
+                } else {
+                    extrasTotal += extraPrice;
+                }
+            }
+        });
+
+        if (basePrice > 0) {
+            const total = ((basePrice + extrasTotal) * quantity).toFixed(2).replace('.', ',');
+            document.querySelectorAll('*').forEach(el => {
+                if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
+                    const priceRegex = /\d+([.,]\d{2})?\s*€/;
+                    if (priceRegex.test(el.innerText)) {
+                        const isTotalDisplay = el.closest('.bg-gray-50') || 
+                                             el.className.includes('font-bold') || 
+                                             el.className.includes('text-3xl');
+                        const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
+                        const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+                        
+                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                            el.innerText = el.innerText.replace(priceRegex, total + ' €');
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // ==========================================
+    // 3. SEATS NUMERIC CONTROL
+    // ==========================================
+    function transformSeatsToNumeric() {
+        const seatsContainer = document.querySelector('.space-y-2');
+        if (!seatsContainer) return;
+        
+        const hasRadios = seatsContainer.querySelector('input[name="seats"]');
+        if (!hasRadios) return;
+        if (document.getElementById('custom-seats-control')) return;
+
+        const checkedRadio = seatsContainer.querySelector('input[name="seats"]:checked');
+        const currentValue = checkedRadio ? checkedRadio.value : "2";
+
+        const numericHTML = `
+            <div id="custom-seats-control" class="flex items-center justify-center space-x-4 py-2">
+                <button id="btn-seats-minus" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path></svg>
+                </button>
+                <span id="custom-seats-value" class="text-2xl font-bold text-gray-900 min-w-[3rem] text-center">${currentValue}</span>
+                <button id="btn-seats-plus" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+                </button>
+            </div>
+        `;
+
+        const hiddenContainer = document.createElement('div');
+        hiddenContainer.id = "hidden-radios";
+        hiddenContainer.style.display = "none";
+        
+        const radios = Array.from(seatsContainer.querySelectorAll('label'));
+        radios.forEach(r => hiddenContainer.appendChild(r));
+
+        seatsContainer.innerHTML = numericHTML;
+        seatsContainer.appendChild(hiddenContainer);
+
+        document.getElementById('btn-seats-minus').onclick = (e) => {
+            e.preventDefault();
+            let val = parseInt(document.getElementById('custom-seats-value').innerText);
+            if (val > 2) { val--; updateSeats(val); }
+        };
+
+        document.getElementById('btn-seats-plus').onclick = (e) => {
+            e.preventDefault();
+            let val = parseInt(document.getElementById('custom-seats-value').innerText);
+            if (val < 6) { val++; updateSeats(val); }
+        };
+
+        function updateSeats(val) {
+            document.getElementById('custom-seats-value').innerText = val;
+            const radio = hiddenContainer.querySelector(`input[value="${val}"]`);
+            if (radio) {
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change', { bubbles: true }));
+                radio.click();
+            }
+            updatePriceDisplay();
+        }
+    }
+
+    // ==========================================
+    // 4. ADD QUANTITY CONTROLS TO EXTRAS
+    // ==========================================
+    function addQuantityToExtras() {
+        const extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
+        if (!extrasHeader) return;
+        
+        const extrasContainer = extrasHeader.parentElement;
+        if (!extrasContainer) return;
+
+        const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
+        
+        extraItems.forEach(item => {
+            if (item.querySelector('.sl-extra-qty-control')) return;
+            
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (!checkbox) return;
+            
+            const nameEl = item.querySelector('.font-medium');
+            if (!nameEl) return;
+            
+            const extraName = nameEl.textContent.trim().toLowerCase();
+            
+            const needsQty = extraName.includes('almofada') || 
+                              extraName.includes('puff') || 
+                              extraName.includes('banco');
+            
+            if (needsQty) {
+                const extraKey = extraName.replace(/\s+/g, '_');
+                if (!extraQuantities[extraKey]) extraQuantities[extraKey] = 1;
+                
+                const qtyControl = document.createElement('div');
+                qtyControl.className = 'sl-extra-qty-control';
+                qtyControl.innerHTML = `
+                    <button class="sl-extra-qty-btn sl-qty-minus" type="button">−</button>
+                    <span class="sl-extra-qty-value">${extraQuantities[extraKey]}</span>
+                    <button class="sl-extra-qty-btn sl-qty-plus" type="button">+</button>
+                `;
+                
+                const priceEl = item.querySelector('[class*="text-[#deb052]"]');
+                if (priceEl) {
+                    priceEl.parentElement.appendChild(qtyControl);
+                } else {
+                    const flex1 = item.querySelector('.flex-1');
+                    if (flex1) flex1.appendChild(qtyControl);
+                }
+                
+                qtyControl.style.display = checkbox.checked ? 'inline-flex' : 'none';
+                
+                checkbox.addEventListener('change', () => {
+                    qtyControl.style.display = checkbox.checked ? 'inline-flex' : 'none';
+                    if (!checkbox.checked) {
+                        extraQuantities[extraKey] = 1;
+                        qtyControl.querySelector('.sl-extra-qty-value').textContent = '1';
+                    }
+                    updatePriceDisplay();
+                });
+                
+                qtyControl.querySelector('.sl-qty-minus').onclick = (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    let val = extraQuantities[extraKey];
+                    if (val > 1) {
+                        val--;
+                        extraQuantities[extraKey] = val;
+                        qtyControl.querySelector('.sl-extra-qty-value').textContent = val;
+                        updatePriceDisplay();
+                    }
+                };
+                
+                qtyControl.querySelector('.sl-qty-plus').onclick = (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    let val = extraQuantities[extraKey];
+                    if (val < 20) {
+                        val++;
+                        extraQuantities[extraKey] = val;
+                        qtyControl.querySelector('.sl-extra-qty-value').textContent = val;
+                        updatePriceDisplay();
+                    }
+                };
+            }
+        });
+    }
+
+    // ==========================================
+    // 5. INTERCEPT "OUTROS" SERVICE CLICK
+    // ==========================================
+    function interceptOutrosClick() {
+        const serviceButtons = document.querySelectorAll('button');
+        serviceButtons.forEach(btn => {
+            const text = btn.innerText.trim();
+            if (text.includes('Outros') && !btn.dataset.slIntercepted) {
+                btn.dataset.slIntercepted = 'true';
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                newBtn.addEventListener('click', (e) => {
+                    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+                    showContactOverlay();
+                }, true);
+            }
+        });
+        
+        const serviceCards = document.querySelectorAll('[class*="cursor-pointer"]');
+        serviceCards.forEach(card => {
+            const text = card.innerText.trim();
+            if (text.includes('Outros') && !card.dataset.slIntercepted) {
+                card.dataset.slIntercepted = 'true';
+                card.addEventListener('click', (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    showContactOverlay();
+                }, true);
+            }
+        });
+    }
+
+    function showContactOverlay() {
+        const existing = document.getElementById('sl-contact-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'sl-contact-overlay';
+        overlay.className = 'sl-contact-overlay';
+        overlay.innerHTML = `
+            <div class="sl-contact-card">
+                <button class="sl-close-btn" onclick="document.getElementById('sl-contact-overlay').remove()">✕</button>
+                <div class="sl-icon-circle">💬</div>
+                <h2>Precisa de um Orçamento Personalizado?</h2>
+                <p class="sl-subtitle">Não encontrou o serviço que procura? Contacte-nos diretamente e teremos todo o prazer em ajudá-lo com um orçamento à medida.</p>
+                <div class="sl-contact-methods">
+                    <a href="tel:+351935798081" class="sl-contact-method">
+                        <div class="sl-method-icon phone">📞</div>
+                        <div class="sl-method-info">
+                            <div class="sl-method-label">Telefone</div>
+                            <div class="sl-method-value">935 798 081</div>
+                        </div>
+                    </a>
+                    <a href="https://wa.me/351935798081?text=Olá! Gostaria de solicitar um orçamento personalizado." target="_blank" class="sl-contact-method">
+                        <div class="sl-method-icon whatsapp">💬</div>
+                        <div class="sl-method-info">
+                            <div class="sl-method-label">WhatsApp</div>
+                            <div class="sl-method-value">Enviar mensagem</div>
+                        </div>
+                    </a>
+                    <a href="mailto:geral@sofalimpo.pt?subject=Pedido de Orçamento Personalizado" class="sl-contact-method">
+                        <div class="sl-method-icon email">📧</div>
+                        <div class="sl-method-info">
+                            <div class="sl-method-label">Email</div>
+                            <div class="sl-method-value">geral@sofalimpo.pt</div>
+                        </div>
+                    </a>
+                </div>
+                <div class="sl-schedule">
+                    <div class="sl-schedule-title">Horário de Atendimento</div>
+                    <div class="sl-schedule-times">
+                        Seg-Sex: 08:00 - 18:00 &nbsp;|&nbsp; Sáb: 09:00 - 15:00
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+    }
+
+    // ==========================================
+    // 6. ADMIN: SEATS PRICING EDITOR
+    // ==========================================
+    function injectAdminSeatsPricingEditor() {
+        if (!window.location.pathname.startsWith('/admin')) return;
+        if (document.getElementById('sl-seats-editor')) return;
+        
+        // Find the "Editar Serviço" modal title
+        const editTitle = Array.from(document.querySelectorAll('h2, h3, div')).find(el => {
+            return el.children.length === 0 && el.innerText && el.innerText.trim() === 'Editar Serviço';
+        });
+        if (!editTitle) return;
+        
+        // Find the modal container
+        const modal = editTitle.closest('[class*="fixed"]');
+        if (!modal) return;
+        
+        // Check if this is the sofa service by finding the slug input
+        const slugInput = Array.from(modal.querySelectorAll('input[type="text"]')).find(i => i.value === 'sofa');
+        if (!slugInput) return;
+        
+        // Find the pricing section: div.bg-gray-50.p-4.rounded-lg.space-y-4
+        const basePriceInput = Array.from(modal.querySelectorAll('input[type="number"]')).find(inp => {
+            const parentText = inp.parentElement?.parentElement?.innerText || '';
+            return parentText.includes('Preço Base') || inp.value === String(PRICING_RULES.sofa.base);
+        });
+        
+        if (!basePriceInput) return;
+        
+        // Find the pricing section container (bg-gray-50 p-4 rounded-lg space-y-4)
+        let pricingSection = basePriceInput.parentElement;
+        while (pricingSection && !pricingSection.className.includes('bg-gray-50')) {
+            pricingSection = pricingSection.parentElement;
+        }
+        if (!pricingSection) pricingSection = basePriceInput.parentElement.parentElement.parentElement;
+        
+        // Create the seats editor
+        const editor = document.createElement('div');
+        editor.id = 'sl-seats-editor';
+        editor.className = 'sl-seats-editor';
+        
+        const currentSeats = PRICING_RULES.sofa.seats;
+        
+        editor.innerHTML = `
+            <h4>💺 Preços por Número de Lugares</h4>
+            <div class="sl-seats-grid">
+                ${[2,3,4,5,6].map(n => `
+                    <div class="sl-seat-item">
+                        <label>${n} Lugares</label>
+                        <input type="number" step="0.01" value="${currentSeats[n] || ''}" 
+                               data-seats="${n}" class="sl-seat-price-input" placeholder="€" />
+                    </div>
+                `).join('')}
+            </div>
+            <button class="sl-seats-save-btn" id="sl-save-seats-btn" type="button">
+                💾 Guardar Preços por Lugares
+            </button>
+            <div class="sl-seats-status" id="sl-seats-status"></div>
+        `;
+        
+        // Insert after the pricing section
+        pricingSection.parentElement.insertBefore(editor, pricingSection.nextSibling);
+        
+        // Save handler
+        document.getElementById('sl-save-seats-btn').onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const statusEl = document.getElementById('sl-seats-status');
+            const btn = document.getElementById('sl-save-seats-btn');
+            btn.textContent = '⏳ A guardar...';
+            btn.disabled = true;
+            
+            const newPrices = {};
+            document.querySelectorAll('.sl-seat-price-input').forEach(inp => {
+                newPrices[inp.dataset.seats] = parseFloat(inp.value) || 0;
+            });
+            
+            PRICING_RULES.sofa.seats = newPrices;
+            
+            try {
+                const token = getAuthToken();
+                if (!token) throw new Error('Sessão expirada');
+                
+                const headers = {
+                    'apikey': ANON_KEY,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+                
+                // Get current service data
+                const resp = await fetch(`${SUPABASE_URL}/rest/v1/services?type=eq.sofa&select=id,pricing_rules`, { headers });
+                const services = await resp.json();
+                
+                if (services.length > 0) {
+                    const svc = services[0];
+                    const updatedRules = { ...svc.pricing_rules, prices_by_seats: newPrices };
+                    
+                    const updateResp = await fetch(`${SUPABASE_URL}/rest/v1/services?id=eq.${svc.id}`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify({ 
+                            pricing_rules: updatedRules,
+                            updated_at: new Date().toISOString()
+                        })
+                    });
+                    
+                    if (updateResp.ok || updateResp.status === 204) {
+                        statusEl.className = 'sl-seats-status success';
+                        statusEl.textContent = '✅ Preços por lugares atualizados com sucesso!';
+                    } else {
+                        throw new Error('Erro HTTP: ' + updateResp.status);
+                    }
+                }
+                
+                // Also try to update prices table
+                try {
+                    const pricesResp = await fetch(`${SUPABASE_URL}/rest/v1/prices?select=id`, { headers });
+                    const prices = await pricesResp.json();
+                    if (Array.isArray(prices) && prices.length > 0) {
+                        await fetch(`${SUPABASE_URL}/rest/v1/prices?id=eq.${prices[0].id}`, {
+                            method: 'PATCH',
+                            headers,
+                            body: JSON.stringify({
+                                sofa_2_seats: newPrices['2'],
+                                sofa_3_seats: newPrices['3'],
+                                sofa_4_seats: newPrices['4'],
+                                sofa_5_seats: newPrices['5'],
+                                sofa_6_seats: newPrices['6'],
+                                updated_at: new Date().toISOString()
+                            })
+                        });
+                    }
+                } catch(e) { /* prices table may not exist */ }
+                
+            } catch(err) {
+                console.error('Error saving seats prices:', err);
+                statusEl.className = 'sl-seats-status error';
+                statusEl.textContent = '❌ Erro: ' + err.message;
+            }
+            
+            btn.innerHTML = '💾 Guardar Preços por Lugares';
+            btn.disabled = false;
+            
+            setTimeout(() => { statusEl.style.display = 'none'; statusEl.className = 'sl-seats-status'; }, 4000);
+        };
+    }
+
+    // ==========================================
+    // 7. ADMIN: INJECT EXTRAS QUANTITY CONFIG
+    // ==========================================
+    function injectAdminExtrasConfig() {
+        if (!window.location.pathname.startsWith('/admin')) return;
+        // The React admin already handles extras editing via "Gerir extras"
+        // No additional injection needed for now
+    }
+
+    // ==========================================
+    // MAIN LOOP
+    // ==========================================
+    setInterval(() => {
+        removeOldSofaCama();
+        
+        if (!window.location.pathname.startsWith('/admin')) {
+            transformSeatsToNumeric();
+            addQuantityToExtras();
+            updatePriceDisplay();
+            interceptOutrosClick();
+        }
+        
+        if (window.location.pathname.startsWith('/admin')) {
+            injectAdminSeatsPricingEditor();
+            injectAdminExtrasConfig();
+        }
+    }, 500);
+
+    document.addEventListener('click', () => setTimeout(updatePriceDisplay, 100));
+})();
+</script>
+
+</body>
+</html>
