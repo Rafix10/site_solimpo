@@ -371,21 +371,18 @@
             });
             const data = await resp.json();
             if (data.length > 0) {
-                // CRITICAL: Convert strings to numbers using parseFloat
                 PRICING_RULES.sofa.seats = {
-                    '1': parseFloat(data[0].sofa_1_seat) || 71,
-                    '2': parseFloat(data[0].sofa_2_seats) || 71,
-                    '3': parseFloat(data[0].sofa_3_seats) || 81,
-                    '4': parseFloat(data[0].sofa_4_seats) || 91,
-                    '5': parseFloat(data[0].sofa_5_seats) || 99,
-                    '6': parseFloat(data[0].sofa_6_seats) || 109
+                    '1': data[0].sofa_1_seat || 71,
+                    '2': data[0].sofa_2_seats || 71,
+                    '3': data[0].sofa_3_seats || 81,
+                    '4': data[0].sofa_4_seats || 91,
+                    '5': data[0].sofa_5_seats || 99,
+                    '6': data[0].sofa_6_seats || 109
                 };
-                // Update base price to match 1 seat price
-                PRICING_RULES.sofa.base = PRICING_RULES.sofa.seats['1'];
-                console.log("✅ Pricing loaded from Supabase:", PRICING_RULES.sofa.seats);
+                console.log("Pricing loaded from Supabase:", PRICING_RULES.sofa.seats);
             }
         } catch(e) {
-            console.warn("⚠️ Failed to load pricing from Supabase, using defaults:", e);
+            console.log("Using default pricing rules");
         }
     }
     loadPricingFromSupabase();
@@ -539,15 +536,12 @@
 
         // Get base price for this number of seats
         let basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
-
-        // CRITICAL: Ensure basePrice is a number, not a string
-        basePrice = parseFloat(basePrice);
-        console.log(`Base price for ${seats} seats: ${basePrice} (type: ${typeof basePrice})`);
+        console.log(`Base price for ${seats} seats: ${basePrice}`);
 
         // Ensure we always have a valid base price
-        if (!basePrice || basePrice <= 0 || isNaN(basePrice)) {
-            basePrice = parseFloat(PRICING_RULES.sofa.base) || 71;
-            console.warn(`⚠️ Using fallback base price: ${basePrice}`);
+        if (!basePrice || basePrice <= 0) {
+            basePrice = PRICING_RULES.sofa.base;
+            console.warn(`Using fallback base price: ${basePrice}`);
         }
 
         // Get quantity
