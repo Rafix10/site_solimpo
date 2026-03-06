@@ -544,12 +544,9 @@
             console.warn(`Using fallback base price: ${basePrice}`);
         }
 
-        // Get quantity
-        const quantitySpan = Array.from(document.querySelectorAll('span')).find(el =>
-            /^\d+$/.test(el.innerText) && el.className.includes('text-2xl')
-        );
-        const quantity = quantitySpan ? parseInt(quantitySpan.innerText) : 1;
-        console.log(`Quantity: ${quantity}`);
+        // SOFA QUANTITY IS ALWAYS 1 (no quantity control for sofas)
+        const quantity = 1;
+        console.log(`Quantity: ${quantity} (fixed)`);
 
         // Calculate extras
         let extrasTotal = 0;
@@ -679,7 +676,43 @@
     }
 
     // ==========================================
-    // 3.5. ADD ESPECIFICAÇÕES HEADER FOR CADEIRAS
+    // 3.5. HIDE QUANTITY CONTROL FOR SOFAS
+    // ==========================================
+    function hideSofaQuantityControl() {
+        // Check if this is sofa service by looking for the custom seats control
+        const seatsControl = document.getElementById('custom-seats-value');
+        if (!seatsControl) return; // Not a sofa service
+
+        // Find all quantity controls (the +/- buttons around a number)
+        const allSpans = Array.from(document.querySelectorAll('span'));
+
+        // Find the quantity control (looks for number in text-2xl span that's NOT the seats control)
+        const quantitySpan = allSpans.find(el =>
+            /^\d+$/.test(el.innerText) &&
+            el.className.includes('text-2xl') &&
+            el.id !== 'custom-seats-value' // Exclude seats control
+        );
+
+        if (!quantitySpan) return;
+
+        // Hide the entire quantity control container
+        let quantityContainer = quantitySpan.closest('.flex.items-center.justify-center');
+        if (quantityContainer && !quantityContainer.classList.contains('sl-hidden')) {
+            quantityContainer.classList.add('sl-hidden');
+            quantityContainer.style.display = 'none';
+
+            // Also hide the "Quantidade" label if it exists
+            const quantityLabel = Array.from(document.querySelectorAll('label, div')).find(el =>
+                el.textContent.trim() === 'Quantidade' && el.children.length === 0
+            );
+            if (quantityLabel) {
+                quantityLabel.style.display = 'none';
+            }
+        }
+    }
+
+    // ==========================================
+    // 3.6. ADD ESPECIFICAÇÕES HEADER FOR CADEIRAS
     // ==========================================
     function addChairsSpecificationsHeader() {
         // Check if this is cadeiras service
@@ -1133,6 +1166,7 @@
         if (!window.location.pathname.startsWith('/admin')) {
             reorganizeFormStructure();
             transformSeatsToNumeric();
+            hideSofaQuantityControl();
             addChairsSpecificationsHeader();
             addQuantityToExtras();
             attachPerSqmListeners();
