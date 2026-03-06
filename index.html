@@ -857,15 +857,46 @@
             navbar.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
 
             navbar.innerHTML = `
+                <style>
+                    .nav-link {
+                        color: #deb052;
+                        text-decoration: none;
+                        font-weight: 500;
+                        transition: color 0.2s;
+                        position: relative;
+                    }
+                    .nav-link::after {
+                        content: '';
+                        position: absolute;
+                        bottom: -4px;
+                        left: 0;
+                        width: 0;
+                        height: 2px;
+                        background-color: #deb052;
+                        transition: width 0.3s ease;
+                    }
+                    .nav-link:hover {
+                        color: #deb052;
+                    }
+                    .nav-link:hover::after {
+                        width: 100%;
+                    }
+                    .nav-link.active {
+                        color: #deb052;
+                    }
+                    .nav-link.active::after {
+                        width: 100%;
+                    }
+                </style>
                 <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
                     <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none; transition: opacity 0.2s;">
-                        <img src="/public/logo.png" alt="SofáLimpo" style="height: 50px; width: auto;">
+                        <img src="/public/logo.png" alt="SofáLimpo" style="height: 80px; width: auto;">
                     </a>
                     <div style="display: flex; gap: 32px; align-items: center;">
-                        <a href="/" style="color: #6b7280; text-decoration: none; font-weight: 500; transition: color 0.2s;">Início</a>
-                        <a href="/sobre" style="color: #6b7280; text-decoration: none; font-weight: 500; transition: color 0.2s;">Sobre</a>
-                        <a href="/empresas" style="color: #deb052; text-decoration: none; font-weight: 700;">Empresas</a>
-                        <a href="/contacto" style="color: #6b7280; text-decoration: none; font-weight: 500; transition: color 0.2s;">Contacto</a>
+                        <a href="/" class="nav-link">Início</a>
+                        <a href="/sobre" class="nav-link">Sobre</a>
+                        <a href="/empresas" class="nav-link active">Empresas</a>
+                        <a href="/contacto" class="nav-link">Contacto</a>
                     </div>
                 </div>
             `;
