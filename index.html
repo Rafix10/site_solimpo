@@ -64,6 +64,23 @@
         transition: background 0.2s;
       }
       .sl-contact-card .sl-close-btn:hover { background: #e5e7eb; }
+      .sl-contact-card .sl-back-btn {
+        position: absolute;
+        top: 16px; left: 16px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: none;
+        background: #f3f4f6;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: background 0.2s;
+        font-weight: 500;
+        color: #1a1a2e;
+      }
+      .sl-contact-card .sl-back-btn:hover { background: #e5e7eb; }
       .sl-contact-card .sl-icon-circle {
         width: 80px; height: 80px;
         border-radius: 50%;
@@ -581,19 +598,7 @@
             l.textContent.includes('Assento')
         )?.closest('.flex.items-start')?.parentElement;
 
-        if (!checkboxContainer || checkboxContainer.querySelector('.sl-chairs-spec-header')) return;
-
-        // Create header
-        const header = document.createElement('h4');
-        header.className = 'text-lg font-semibold mb-4 sl-chairs-spec-header';
-        header.textContent = 'Especificações';
-        header.style.color = '#000000';
-
-        // Insert before the first checkbox
-        const firstCheckbox = checkboxContainer.querySelector('.flex.items-start');
-        if (firstCheckbox) {
-            checkboxContainer.insertBefore(header, firstCheckbox);
-        }
+        if (!checkboxContainer) return;
     }
 
     // ==========================================
@@ -612,19 +617,6 @@
 
         const extrasContainer = extrasHeader.parentElement;
         if (!extrasContainer) return;
-
-        // Add "Especificações" label above extras if not already added
-        if (!extrasContainer.querySelector('.sl-extras-spec-label')) {
-            const specLabel = document.createElement('h4');
-            specLabel.className = 'text-lg font-semibold mb-4 sl-extras-spec-label';
-            specLabel.textContent = 'Especificações';
-            specLabel.style.color = '#000000';
-            specLabel.style.fontWeight = '600';
-            specLabel.style.fontSize = '1.125rem';
-
-            // Insert before the extras header
-            extrasContainer.insertBefore(specLabel, extrasHeader);
-        }
 
         const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
 
@@ -720,16 +712,33 @@
             }
         });
 
-        // Skip remaining reorganization if this is a tapete service
-        const hasLarguraLabel = Array.from(document.querySelectorAll('label')).some(l =>
+        // Detect service type
+        const hasTapeteLabels = Array.from(document.querySelectorAll('label')).some(l =>
             l.textContent.includes('Largura') || l.textContent.includes('Comprimento')
         );
-        if (hasLarguraLabel) return;
+        const hasVidrosLabels = Array.from(document.querySelectorAll('label')).some(l =>
+            l.textContent.includes('Altura')
+        );
+        const hasColchaoLabels = Array.from(document.querySelectorAll('label')).some(l =>
+            l.textContent.includes('Tamanho') && !l.textContent.includes('Lugares')
+        );
+
+        // Skip reorganization for tapete service
+        if (hasTapeteLabels) return;
 
         // Find all h4 headers
         const allHeaders = Array.from(document.querySelectorAll('h4'));
 
-        // Hide all "Especificações" headers
+        // For vidros: hide all "Especificações" headers completely
+        if (hasVidrosLabels) {
+            const specsHeaders = allHeaders.filter(h => h.innerText.includes('Especificações'));
+            specsHeaders.forEach((header) => {
+                header.style.display = 'none';
+            });
+            return;
+        }
+
+        // For colchao: Hide all existing "Especificações" headers
         const specsHeaders = allHeaders.filter(h => h.innerText.includes('Especificações'));
         specsHeaders.forEach((header) => {
             if (!header.classList.contains('sl-hide-element')) {
@@ -737,14 +746,16 @@
             }
         });
 
-        // Find and rename "Extras Disponíveis" to "Especificações"
-        const extrasHeaders = allHeaders.filter(h => h.innerText.includes('Extras Disponíveis'));
-        extrasHeaders.forEach(extrasHeader => {
-            if (extrasHeader.textContent !== 'Especificações' && !extrasHeader.dataset.slRenamed) {
-                extrasHeader.textContent = 'Especificações';
-                extrasHeader.dataset.slRenamed = 'true';
-            }
-        });
+        // For colchao: Rename "Extras Disponíveis" to "Especificações"
+        if (hasColchaoLabels) {
+            const extrasHeaders = allHeaders.filter(h => h.innerText.includes('Extras Disponíveis'));
+            extrasHeaders.forEach(extrasHeader => {
+                if (extrasHeader.textContent !== 'Especificações' && !extrasHeader.dataset.slRenamed) {
+                    extrasHeader.textContent = 'Especificações';
+                    extrasHeader.dataset.slRenamed = 'true';
+                }
+            });
+        }
     }
 
     // ==========================================
@@ -787,6 +798,9 @@
         overlay.className = 'sl-contact-overlay';
         overlay.innerHTML = `
             <div class="sl-contact-card">
+                <button class="sl-back-btn" onclick="document.getElementById('sl-contact-overlay').remove()">
+                    <span style="font-size: 18px;">←</span> Voltar
+                </button>
                 <button class="sl-close-btn" onclick="document.getElementById('sl-contact-overlay').remove()">✕</button>
                 <div class="sl-icon-circle">💬</div>
                 <h2>Precisa de um Orçamento Personalizado?</h2>
