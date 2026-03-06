@@ -1301,9 +1301,125 @@
     }
 
     // ==========================================
+    // ULTRA-AGGRESSIVE REACT STATE INTERCEPTOR
+    // ==========================================
+    function interceptReactState() {
+        // Intercept all event handlers on the submit button
+        const checkAndIntercept = () => {
+            const buttons = Array.from(document.querySelectorAll('button'));
+            const submitBtn = buttons.find(btn =>
+                btn.innerText.includes('Adicionar ao Orçamento') ||
+                btn.innerText.includes('Orçamento')
+            );
+
+            if (submitBtn && !submitBtn.dataset.slReactIntercepted) {
+                submitBtn.dataset.slReactIntercepted = 'true';
+
+                // Intercept at capture phase (before React)
+                submitBtn.addEventListener('click', function(e) {
+                    console.log('🚨 ULTRA INTERCEPT - Button clicked!');
+
+                    const seatsSpan = document.getElementById('custom-seats-value');
+                    if (!seatsSpan) return;
+
+                    const seats = parseInt(seatsSpan.innerText);
+                    const correctPrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
+
+                    console.log('💺 Seats:', seats, '→ Correct price:', correctPrice);
+
+                    // Find React's fiber node and hack the state directly
+                    setTimeout(() => {
+                        // After React processes, fix localStorage immediately
+                        const fixStorage = () => {
+                            const keys = Object.keys(localStorage);
+                            keys.forEach(key => {
+                                try {
+                                    const value = localStorage.getItem(key);
+                                    if (!value) return;
+
+                                    const data = JSON.parse(value);
+
+                                    // Check if it's quote items
+                                    const processItem = (item) => {
+                                        if (!item || !item.service) return false;
+
+                                        if (item.service.toLowerCase().includes('sofá')) {
+                                            const specs = item.specifications || {};
+                                            const seatsMatch = JSON.stringify(specs).match(/(\d+)\s+lugares?/i);
+
+                                            if (seatsMatch) {
+                                                const itemSeats = parseInt(seatsMatch[1]);
+                                                const rightPrice = PRICING_RULES.sofa.seats[itemSeats] || PRICING_RULES.sofa.base;
+
+                                                if (item.basePrice !== rightPrice) {
+                                                    console.log('🔧 FIXING:', item.service, 'from', item.basePrice, 'to', rightPrice);
+                                                    item.basePrice = rightPrice;
+
+                                                    // Recalc total
+                                                    let total = rightPrice * (item.quantity || 1);
+                                                    if (specs.extras) {
+                                                        specs.extras.forEach(extra => {
+                                                            if (extra.includes('Impermeabilização')) total += PRICING_RULES.sofa.extras.impermeabilizacao;
+                                                            if (extra.includes('Gorduras')) total += PRICING_RULES.sofa.extras.gorduras;
+                                                            if (extra.includes('Sangue')) total += PRICING_RULES.sofa.extras.sangue;
+                                                            if (extra.includes('Chaise')) total += PRICING_RULES.sofa.extras.chaise;
+                                                        });
+                                                    }
+                                                    item.totalPrice = total;
+                                                    return true;
+                                                }
+                                            }
+                                        }
+                                        return false;
+                                    };
+
+                                    let changed = false;
+                                    if (Array.isArray(data)) {
+                                        data.forEach(item => {
+                                            if (processItem(item)) changed = true;
+                                        });
+                                    } else {
+                                        if (processItem(data)) changed = true;
+                                    }
+
+                                    if (changed) {
+                                        localStorage.setItem(key, JSON.stringify(data));
+                                        console.log('✅ Storage fixed!');
+
+                                        // Force React to re-render by dispatching storage event
+                                        window.dispatchEvent(new StorageEvent('storage', {
+                                            key: key,
+                                            newValue: JSON.stringify(data),
+                                            url: window.location.href,
+                                            storageArea: localStorage
+                                        }));
+                                    }
+                                } catch(e) {}
+                            });
+                        };
+
+                        // Fix immediately and keep trying
+                        fixStorage();
+                        setTimeout(fixStorage, 50);
+                        setTimeout(fixStorage, 100);
+                        setTimeout(fixStorage, 200);
+                        setTimeout(fixStorage, 500);
+                    }, 0);
+                }, true); // Use capture phase
+
+                console.log('🎯 Ultra-aggressive interceptor installed');
+            }
+        };
+
+        // Keep trying to attach
+        setInterval(checkAndIntercept, 500);
+    }
+
+    // ==========================================
     // INITIALIZE EARLY INTERCEPTORS
     // ==========================================
     interceptLocalStorage();
+    interceptReactState();
 
     // ==========================================
     // MUTATION OBSERVER (faster, no flashing)
