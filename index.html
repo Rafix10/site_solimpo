@@ -307,14 +307,32 @@
 
     function getAuthToken() {
         try {
-            const keys = Object.keys(localStorage).filter(k => k.includes('supabase') && k.includes('auth'));
+            // Try multiple storage key patterns
+            const keys = Object.keys(localStorage).filter(k =>
+                k.includes('supabase') || k.includes('auth-token')
+            );
+
             for (const key of keys) {
-                const data = JSON.parse(localStorage.getItem(key) || '{}');
-                if (data.access_token) return data.access_token;
-                if (data.currentSession?.access_token) return data.currentSession.access_token;
+                try {
+                    const data = JSON.parse(localStorage.getItem(key) || '{}');
+
+                    // Check various token locations
+                    if (data.access_token) return data.access_token;
+                    if (data.currentSession?.access_token) return data.currentSession.access_token;
+                    if (data.session?.access_token) return data.session.access_token;
+                    if (data.user?.access_token) return data.user.access_token;
+                } catch(e) {
+                    continue;
+                }
             }
-        } catch(e) {}
-        return null;
+
+            // Fallback: use ANON_KEY for public operations
+            console.warn('No auth token found, using anon key');
+            return ANON_KEY;
+        } catch(e) {
+            console.error('Error getting auth token:', e);
+            return ANON_KEY;
+        }
     }
 
     // ==========================================
@@ -893,12 +911,12 @@
             
             try {
                 const token = getAuthToken();
-                if (!token) throw new Error('Sessão expirada');
-                
+
                 const headers = {
                     'apikey': ANON_KEY,
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
                 };
                 
                 // Get current service data
