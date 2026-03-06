@@ -490,33 +490,60 @@
         );
         if (hasLarguraLabel) return;
 
-        const extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
+        // Find extras header (either "Extras Disponíveis" or "Tipo de serviço" for tapetes)
+        let extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
+        let isServiceType = false;
+
+        if (!extrasHeader) {
+            // Check for "Tipo de serviço" (only for tapetes)
+            const serviceTypeHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Tipo de serviço'));
+            if (serviceTypeHeader) {
+                const serviceTypeContainer = serviceTypeHeader.parentElement;
+                if (serviceTypeContainer) {
+                    const firstCheckbox = serviceTypeContainer.querySelector('input[type="checkbox"]');
+                    if (firstCheckbox) {
+                        const label = firstCheckbox.closest('label');
+                        if (label) {
+                            const labelText = label.innerText.toLowerCase();
+                            if (labelText.includes('higienização') || labelText.includes('lavanderia') || labelText.includes('local')) {
+                                extrasHeader = serviceTypeHeader;
+                                isServiceType = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (!extrasHeader) return;
 
         const extrasContainer = extrasHeader.parentElement;
         if (!extrasContainer) return;
 
         const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
-        
+
         extraItems.forEach(item => {
             if (item.querySelector('.sl-extra-qty-control')) return;
-            
+
             const checkbox = item.querySelector('input[type="checkbox"]');
             if (!checkbox) return;
-            
+
             const nameEl = item.querySelector('.font-medium');
             if (!nameEl) return;
-            
+
             const extraName = nameEl.textContent.trim().toLowerCase();
-            
-            const needsQty = extraName.includes('almofada') || 
-                              extraName.includes('puff') || 
-                              extraName.includes('banco');
-            
+
+            // Only add quantity controls for non-service-type extras
+            const needsQty = !isServiceType && (
+                extraName.includes('almofada') ||
+                extraName.includes('puff') ||
+                extraName.includes('banco')
+            );
+
             if (needsQty) {
                 const extraKey = extraName.replace(/\s+/g, '_');
                 if (!extraQuantities[extraKey]) extraQuantities[extraKey] = 1;
-                
+
                 const qtyControl = document.createElement('div');
                 qtyControl.className = 'sl-extra-qty-control';
                 qtyControl.innerHTML = `
@@ -524,7 +551,7 @@
                     <span class="sl-extra-qty-value">${extraQuantities[extraKey]}</span>
                     <button class="sl-extra-qty-btn sl-qty-plus" type="button">+</button>
                 `;
-                
+
                 const priceEl = item.querySelector('[class*="text-[#deb052]"]');
                 if (priceEl) {
                     priceEl.parentElement.appendChild(qtyControl);
@@ -532,9 +559,9 @@
                     const flex1 = item.querySelector('.flex-1');
                     if (flex1) flex1.appendChild(qtyControl);
                 }
-                
+
                 qtyControl.style.display = checkbox.checked ? 'inline-flex' : 'none';
-                
+
                 checkbox.addEventListener('change', () => {
                     qtyControl.style.display = checkbox.checked ? 'inline-flex' : 'none';
                     if (!checkbox.checked) {
@@ -543,7 +570,7 @@
                     }
                     updatePriceDisplay();
                 });
-                
+
                 qtyControl.querySelector('.sl-qty-minus').onclick = (e) => {
                     e.preventDefault(); e.stopPropagation();
                     let val = extraQuantities[extraKey];
@@ -554,7 +581,7 @@
                         updatePriceDisplay();
                     }
                 };
-                
+
                 qtyControl.querySelector('.sl-qty-plus').onclick = (e) => {
                     e.preventDefault(); e.stopPropagation();
                     let val = extraQuantities[extraKey];
@@ -567,6 +594,30 @@
                 };
             }
         });
+    }
+
+    // ==========================================
+    // 4.5. RENAME EXTRAS HEADER FOR TAPETES
+    // ==========================================
+    function renameExtrasHeaderForTapetes() {
+        // Skip if this is a per_sqm service
+        const hasLarguraLabel = Array.from(document.querySelectorAll('label')).some(l =>
+            l.textContent.includes('Largura') || l.textContent.includes('Comprimento')
+        );
+        if (hasLarguraLabel) return;
+
+        // Check if this is a tapetes service
+        const serviceTitle = Array.from(document.querySelectorAll('*')).find(el =>
+            el.innerText && el.innerText.includes('Tapetes')
+        );
+
+        if (!serviceTitle) return;
+
+        // Find and rename "Extras Disponíveis" to "Tipo de serviço" for tapetes
+        const extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
+        if (extrasHeader) {
+            extrasHeader.textContent = 'Tipo de serviço';
+        }
     }
 
     // ==========================================
@@ -813,14 +864,15 @@
     // ==========================================
     setInterval(() => {
         removeOldSofaCama();
-        
+
         if (!window.location.pathname.startsWith('/admin')) {
+            renameExtrasHeaderForTapetes();
             transformSeatsToNumeric();
             addQuantityToExtras();
             updatePriceDisplay();
             interceptOutrosClick();
         }
-        
+
         if (window.location.pathname.startsWith('/admin')) {
             injectAdminSeatsPricingEditor();
             injectAdminExtrasConfig();
