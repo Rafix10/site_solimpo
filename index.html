@@ -263,6 +263,16 @@
         background: #fee2e2;
         color: #991b1b;
       }
+
+      /* Style adjustments for quote form */
+      .sl-size-label {
+        font-weight: 700;
+        font-size: 1rem;
+      }
+
+      .sl-hide-element {
+        display: none !important;
+      }
     </style>
     <script type="module" crossorigin src="/assets/index-DDZKCkf0.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BRgxaNTN.css">
@@ -298,7 +308,7 @@
     let PRICING_RULES = {
         'sofa': {
             'base': 71.00,
-            'seats': { '2': 71.00, '3': 81.00, '4': 91.00, '5': 99.00, '6': 109.00 }
+            'seats': { '1': 71.00, '2': 71.00, '3': 81.00, '4': 91.00, '5': 99.00, '6': 109.00 }
         },
         'colchao': { 'solteiro': 50.00, 'casal': 74.00 }
     };
@@ -306,13 +316,19 @@
     // Load latest pricing from Supabase
     async function loadPricingFromSupabase() {
         try {
-            const resp = await fetch(`${SUPABASE_URL}/rest/v1/services?type=eq.sofa&select=pricing_rules`, {
+            const resp = await fetch(`${SUPABASE_URL}/rest/v1/prices?select=sofa_1_seat,sofa_2_seats,sofa_3_seats,sofa_4_seats,sofa_5_seats,sofa_6_seats`, {
                 headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
             });
             const data = await resp.json();
-            if (data.length > 0 && data[0].pricing_rules?.prices_by_seats) {
-                PRICING_RULES.sofa.seats = data[0].pricing_rules.prices_by_seats;
-                PRICING_RULES.sofa.base = data[0].pricing_rules.base_price || 71;
+            if (data.length > 0) {
+                PRICING_RULES.sofa.seats = {
+                    '1': data[0].sofa_1_seat || 71,
+                    '2': data[0].sofa_2_seats || 71,
+                    '3': data[0].sofa_3_seats || 81,
+                    '4': data[0].sofa_4_seats || 91,
+                    '5': data[0].sofa_5_seats || 99,
+                    '6': data[0].sofa_6_seats || 109
+                };
                 console.log("Pricing loaded from Supabase:", PRICING_RULES.sofa.seats);
             }
         } catch(e) {
@@ -432,7 +448,7 @@
         if (document.getElementById('custom-seats-control')) return;
 
         const checkedRadio = seatsContainer.querySelector('input[name="seats"]:checked');
-        const currentValue = checkedRadio ? checkedRadio.value : "2";
+        const currentValue = checkedRadio ? checkedRadio.value : "1";
 
         const numericHTML = `
             <div id="custom-seats-control" class="flex items-center justify-center space-x-4 py-2">
@@ -449,7 +465,7 @@
         const hiddenContainer = document.createElement('div');
         hiddenContainer.id = "hidden-radios";
         hiddenContainer.style.display = "none";
-        
+
         const radios = Array.from(seatsContainer.querySelectorAll('label'));
         radios.forEach(r => hiddenContainer.appendChild(r));
 
@@ -459,7 +475,7 @@
         document.getElementById('btn-seats-minus').onclick = (e) => {
             e.preventDefault();
             let val = parseInt(document.getElementById('custom-seats-value').innerText);
-            if (val > 2) { val--; updateSeats(val); }
+            if (val > 1) { val--; updateSeats(val); }
         };
 
         document.getElementById('btn-seats-plus').onclick = (e) => {
@@ -581,33 +597,57 @@
     }
 
     // ==========================================
-    // 4.5. RENAME EXTRAS HEADER FOR TAPETES
+    // 4.5. REORGANIZE FORM HEADERS & LABELS
     // ==========================================
-    function renameExtrasHeaderForTapetes() {
+    function reorganizeFormStructure() {
         // Skip if this is a per_sqm service
         const hasLarguraLabel = Array.from(document.querySelectorAll('label')).some(l =>
             l.textContent.includes('Largura') || l.textContent.includes('Comprimento')
         );
         if (hasLarguraLabel) return;
 
+        // Find and update "Tamanho" label to make it bold
+        const sizeLabels = Array.from(document.querySelectorAll('label')).filter(l =>
+            l.textContent.includes('Tamanho')
+        );
+        sizeLabels.forEach(label => {
+            label.classList.add('sl-size-label');
+            label.style.fontWeight = '700';
+            label.style.fontSize = '1rem';
+        });
+
         // Find all h4 headers
         const allHeaders = Array.from(document.querySelectorAll('h4'));
-        const extrasHeader = allHeaders.find(h => h.innerText.includes('Extras Disponíveis'));
 
-        if (!extrasHeader) return;
+        // Find "Especificações" header (first one)
+        const specsHeaders = allHeaders.filter(h => h.innerText.includes('Especificações'));
+        specsHeaders.forEach((header, idx) => {
+            if (idx === 0) {
+                // Hide the first "Especificações" header
+                header.classList.add('sl-hide-element');
+            }
+        });
+
+        // Find and rename "Extras Disponíveis" to "Especificações"
+        const extrasHeader = allHeaders.find(h => h.innerText.includes('Extras Disponíveis'));
+        if (extrasHeader) {
+            extrasHeader.textContent = 'Especificações';
+        }
 
         // Check if any of the extras contain "Higienização" (indicating it's tapetes service type)
-        const extrasContainer = extrasHeader.parentElement;
-        if (!extrasContainer) return;
+        if (extrasHeader) {
+            const extrasContainer = extrasHeader.parentElement;
+            if (extrasContainer) {
+                const extraLabels = Array.from(extrasContainer.querySelectorAll('label'));
+                const hasCarpetHygiene = extraLabels.some(label =>
+                    label.innerText.includes('Higienização')
+                );
 
-        const extraLabels = Array.from(extrasContainer.querySelectorAll('label'));
-        const hasCarpetHygiene = extraLabels.some(label =>
-            label.innerText.includes('Higienização')
-        );
-
-        // Only rename if it's tapetes service (has Higienização extras)
-        if (hasCarpetHygiene) {
-            extrasHeader.textContent = 'Tipo de serviço';
+                // For tapetes service types, rename to "Tipo de serviço"
+                if (hasCarpetHygiene) {
+                    extrasHeader.textContent = 'Tipo de serviço';
+                }
+            }
         }
     }
 
@@ -739,10 +779,10 @@
         editor.innerHTML = `
             <h4>💺 Preços por Número de Lugares</h4>
             <div class="sl-seats-grid">
-                ${[2,3,4,5,6].map(n => `
+                ${[1,2,3,4,5,6].map(n => `
                     <div class="sl-seat-item">
-                        <label>${n} Lugares</label>
-                        <input type="number" step="0.01" value="${currentSeats[n] || ''}" 
+                        <label>${n} ${n === 1 ? 'Lugar' : 'Lugares'}</label>
+                        <input type="number" step="0.01" value="${currentSeats[n] || ''}"
                                data-seats="${n}" class="sl-seat-price-input" placeholder="€" />
                     </div>
                 `).join('')}
@@ -817,6 +857,7 @@
                             method: 'PATCH',
                             headers,
                             body: JSON.stringify({
+                                sofa_1_seat: newPrices['1'],
                                 sofa_2_seats: newPrices['2'],
                                 sofa_3_seats: newPrices['3'],
                                 sofa_4_seats: newPrices['4'],
@@ -857,7 +898,7 @@
         removeOldSofaCama();
 
         if (!window.location.pathname.startsWith('/admin')) {
-            renameExtrasHeaderForTapetes();
+            reorganizeFormStructure();
             transformSeatsToNumeric();
             addQuantityToExtras();
             updatePriceDisplay();
