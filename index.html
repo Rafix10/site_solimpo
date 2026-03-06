@@ -757,12 +757,24 @@
             const radio = hiddenContainer.querySelector(`input[value="${val}"]`);
             if (radio) {
                 radio.checked = true;
+
+                // Temporarily disable the mutation observer to prevent re-running customizations
+                const wasObserving = window.slObserverActive;
+                window.slObserverActive = false;
+
                 radio.dispatchEvent(new Event('change', { bubbles: true }));
                 radio.click();
+
+                // Re-enable observer after a short delay
+                setTimeout(() => {
+                    window.slObserverActive = wasObserving;
+                }, 200);
             }
             console.log(`📊 Current PRICING_RULES.sofa.seats:`, PRICING_RULES.sofa.seats);
             console.log(`💰 Price for ${val} seats should be: ${PRICING_RULES.sofa.seats[val]}€`);
-            updatePriceDisplay();
+
+            // Only update price display, don't re-run all customizations
+            setTimeout(() => updatePriceDisplay(), 100);
         }
     }
 
@@ -1034,10 +1046,14 @@
         const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
 
         extraItems.forEach(item => {
+            // Skip if already has quantity control
             if (item.querySelector('.sl-extra-qty-control')) return;
 
             const checkbox = item.querySelector('input[type="checkbox"]');
             if (!checkbox) return;
+
+            // Skip if this checkbox already has our listener
+            if (checkbox.dataset.slQtyListener) return;
 
             const nameEl = item.querySelector('.font-medium');
             if (!nameEl) return;
@@ -1071,17 +1087,28 @@
 
                 qtyControl.style.display = checkbox.checked ? 'inline-flex' : 'none';
 
-                checkbox.addEventListener('change', () => {
+                // Mark checkbox as having our listener to prevent duplicates
+                checkbox.dataset.slQtyListener = 'true';
+
+                // Use a single change handler
+                const changeHandler = () => {
                     qtyControl.style.display = checkbox.checked ? 'inline-flex' : 'none';
                     if (!checkbox.checked) {
                         extraQuantities[extraKey] = 1;
                         qtyControl.querySelector('.sl-extra-qty-value').textContent = '1';
                     }
                     updatePriceDisplay();
-                });
+                };
 
-                qtyControl.querySelector('.sl-qty-minus').onclick = (e) => {
-                    e.preventDefault(); e.stopPropagation();
+                checkbox.addEventListener('change', changeHandler);
+
+                // Minus button
+                const minusBtn = qtyControl.querySelector('.sl-qty-minus');
+                minusBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+
                     let val = extraQuantities[extraKey];
                     if (val > 1) {
                         val--;
@@ -1091,8 +1118,13 @@
                     }
                 };
 
-                qtyControl.querySelector('.sl-qty-plus').onclick = (e) => {
-                    e.preventDefault(); e.stopPropagation();
+                // Plus button
+                const plusBtn = qtyControl.querySelector('.sl-qty-plus');
+                plusBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+
                     let val = extraQuantities[extraKey];
                     if (val < 20) {
                         val++;
@@ -1475,7 +1507,12 @@
     // ==========================================
     // MUTATION OBSERVER (faster, no flashing)
     // ==========================================
+    window.slObserverActive = true;
+
     const observer = new MutationObserver((mutations) => {
+        // Skip if observer is temporarily disabled
+        if (!window.slObserverActive) return;
+
         // Debounce: only run once per batch of mutations
         clearTimeout(window.slCustomizationTimeout);
         window.slCustomizationTimeout = setTimeout(applyAllCustomizations, 50);
