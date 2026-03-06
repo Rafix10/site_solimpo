@@ -82,7 +82,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         sender: {
           name: "Sofá Limpo",
-          email: "inete210061@gmail.com",
+          email: "no-reply@sofalimpo.pt",
         },
         to: [
           {
