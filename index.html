@@ -491,7 +491,10 @@
                                                  el.className.includes('text-3xl');
                             const isOptionLabel = el.closest('label');
 
-                            if (isTotalDisplay && !isOptionLabel) {
+                            // Don't touch extra prices
+                            const isInExtrasSection = el.closest('label') && el.textContent.includes('+');
+
+                            if (isTotalDisplay && !isOptionLabel && !isInExtrasSection) {
                                 el.innerText = el.innerText.replace(priceRegex, total + ' €');
                             }
                         }
@@ -547,7 +550,10 @@
                         const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                         const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
 
-                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                        // Don't touch extra prices in labels with +
+                        const isInExtrasSection = el.closest('label') && el.textContent.includes('+');
+
+                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice && !isInExtrasSection) {
                             el.innerText = el.innerText.replace(priceRegex, total + ' €');
                         }
                     }
@@ -637,7 +643,12 @@
                     const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                     const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
 
-                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                    // CRITICAL: Don't touch extra prices in the extras list
+                    const isInExtrasSection = el.closest('label') && el.textContent.includes('+');
+                    const hasExtraKeywords = el.textContent.toLowerCase().match(/(chaise|almofada|puff|banco|colch[aã]o)/);
+                    const isExtraLabel = isInExtrasSection || hasExtraKeywords;
+
+                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice && !isExtraLabel) {
                         const oldPrice = el.innerText;
                         el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
                         updatedCount++;
@@ -669,6 +680,26 @@
                         const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
                         const isSeatLabel = el.closest('label')?.textContent?.includes('Lugar');
 
+                        // CRITICAL: Don't touch extra prices in the extras list
+                        const isInExtrasSection = el.closest('label') && el.textContent.includes('+');
+                        const hasExtraKeywords = el.textContent.toLowerCase().match(/(chaise|almofada|puff|banco|colch[aã]o)/);
+                        const isExtraLabel = isInExtrasSection || hasExtraKeywords;
+
+                        // Check if this is in the "Extras Disponíveis" section
+                        let currentEl = el;
+                        let isInExtrasContainer = false;
+                        while (currentEl && currentEl !== document.body) {
+                            const siblings = currentEl.parentElement?.children || [];
+                            for (let sibling of siblings) {
+                                if (sibling.textContent?.includes('Extras Disponíveis')) {
+                                    isInExtrasContainer = true;
+                                    break;
+                                }
+                            }
+                            if (isInExtrasContainer) break;
+                            currentEl = currentEl.parentElement;
+                        }
+
                         // Check if this might be a summary/total element
                         const parent = el.parentElement;
                         const isPossibleTotal = parent && (
@@ -680,7 +711,7 @@
                             el.innerText.trim().endsWith('€')
                         );
 
-                        if (!isOptionLabel && !isExtraPrice && !isSeatLabel && isPossibleTotal) {
+                        if (!isOptionLabel && !isExtraPrice && !isSeatLabel && !isExtraLabel && !isInExtrasContainer && isPossibleTotal) {
                             const currentPrice = el.innerText.match(priceRegex);
                             if (currentPrice && currentPrice[0] !== formattedPrice + ' €') {
                                 console.log(`🔄 Force updating: "${el.innerText}" -> "${formattedPrice} €"`);
