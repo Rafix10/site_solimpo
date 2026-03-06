@@ -357,70 +357,32 @@
     // ==========================================
     let PRICING_RULES = {
         'sofa': {
-            'base': 51.00,
-            'seats': { '1': 51.00, '2': 71.00, '3': 81.00, '4': 91.00, '5': 99.00, '6': 109.00 }
+            'base': 71.00,
+            'seats': { '1': 71.00, '2': 71.00, '3': 81.00, '4': 91.00, '5': 99.00, '6': 109.00 }
         },
         'colchao': { 'solteiro': 50.00, 'casal': 74.00 }
     };
 
-    // Load latest pricing from Supabase - try both sources
+    // Load latest pricing from Supabase
     async function loadPricingFromSupabase() {
         try {
-            // First, try to load from services.pricing_rules (primary source)
-            const servicesResp = await fetch(`${SUPABASE_URL}/rest/v1/services?type=eq.sofa&select=pricing_rules`, {
+            const resp = await fetch(`${SUPABASE_URL}/rest/v1/prices?select=sofa_1_seat,sofa_2_seats,sofa_3_seats,sofa_4_seats,sofa_5_seats,sofa_6_seats`, {
                 headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
             });
-            const services = await servicesResp.json();
-
-            if (services.length > 0 && services[0].pricing_rules?.prices_by_seats) {
-                const seats = services[0].pricing_rules.prices_by_seats;
+            const data = await resp.json();
+            if (data.length > 0) {
                 PRICING_RULES.sofa.seats = {
-                    '1': parseFloat(seats['1']) || 51,
-                    '2': parseFloat(seats['2']) || 71,
-                    '3': parseFloat(seats['3']) || 81,
-                    '4': parseFloat(seats['4']) || 91,
-                    '5': parseFloat(seats['5']) || 99,
-                    '6': parseFloat(seats['6']) || 109
+                    '1': data[0].sofa_1_seat || 71,
+                    '2': data[0].sofa_2_seats || 71,
+                    '3': data[0].sofa_3_seats || 81,
+                    '4': data[0].sofa_4_seats || 91,
+                    '5': data[0].sofa_5_seats || 99,
+                    '6': data[0].sofa_6_seats || 109
                 };
-                PRICING_RULES.sofa.base = PRICING_RULES.sofa.seats['1'];
-                console.log("✅ Pricing loaded from services.pricing_rules:", PRICING_RULES.sofa.seats);
-                console.log("✅ Base price set to:", PRICING_RULES.sofa.base);
-
-                // Verify all prices
-                console.log("📊 VERIFICATION - All seat prices:");
-                for (let i = 1; i <= 6; i++) {
-                    console.log(`   ${i} lugar(es): ${PRICING_RULES.sofa.seats[i]}€`);
-                }
-                return;
-            }
-
-            // Fallback: try prices table
-            const pricesResp = await fetch(`${SUPABASE_URL}/rest/v1/prices?select=sofa_1_seat,sofa_2_seats,sofa_3_seats,sofa_4_seats,sofa_5_seats,sofa_6_seats`, {
-                headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
-            });
-            const prices = await pricesResp.json();
-
-            if (prices.length > 0) {
-                PRICING_RULES.sofa.seats = {
-                    '1': parseFloat(prices[0].sofa_1_seat) || 51,
-                    '2': parseFloat(prices[0].sofa_2_seats) || 71,
-                    '3': parseFloat(prices[0].sofa_3_seats) || 81,
-                    '4': parseFloat(prices[0].sofa_4_seats) || 91,
-                    '5': parseFloat(prices[0].sofa_5_seats) || 99,
-                    '6': parseFloat(prices[0].sofa_6_seats) || 109
-                };
-                PRICING_RULES.sofa.base = PRICING_RULES.sofa.seats['1'];
-                console.log("✅ Pricing loaded from prices table:", PRICING_RULES.sofa.seats);
-                console.log("✅ Base price set to:", PRICING_RULES.sofa.base);
-
-                // Verify all prices
-                console.log("📊 VERIFICATION - All seat prices:");
-                for (let i = 1; i <= 6; i++) {
-                    console.log(`   ${i} lugar(es): ${PRICING_RULES.sofa.seats[i]}€`);
-                }
+                console.log("Pricing loaded from Supabase:", PRICING_RULES.sofa.seats);
             }
         } catch(e) {
-            console.warn("⚠️ Using default pricing rules:", e);
+            console.log("Using default pricing rules");
         }
     }
     loadPricingFromSupabase();
@@ -490,9 +452,8 @@
                                                  el.className.includes('font-bold') ||
                                                  el.className.includes('text-3xl');
                             const isOptionLabel = el.closest('label');
-                            const isExtraLabel = el.innerText.includes('+') && el.closest('label');
 
-                            if (isTotalDisplay && !isOptionLabel && !isExtraLabel) {
+                            if (isTotalDisplay && !isOptionLabel) {
                                 el.innerText = el.innerText.replace(priceRegex, total + ' €');
                             }
                         }
@@ -547,9 +508,8 @@
                                              el.className.includes('text-3xl');
                         const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                         const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
-                        const isExtraLabel = el.innerText.includes('+') && el.closest('label');
 
-                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice && !isExtraLabel) {
+                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
                             el.innerText = el.innerText.replace(priceRegex, total + ' €');
                         }
                     }
@@ -563,23 +523,20 @@
     // ==========================================
     function updateSofaPrice() {
         console.log("🛋️ Calculating SOFA price...");
-        console.log("📋 Available pricing rules:", PRICING_RULES.sofa.seats);
 
         // Get seats value
         const seatsSpan = document.getElementById('custom-seats-value');
         if (!seatsSpan) {
-            console.warn("⚠️ Seats span not found");
+            console.warn("Seats span not found");
             return;
         }
 
         const seats = seatsSpan.innerText.trim();
-        console.log(`👥 Seats selected: ${seats} (type: ${typeof seats})`);
+        console.log(`Seats: ${seats}`);
 
         // Get base price for this number of seats
         let basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
-        console.log(`💰 Base price for ${seats} seats: ${basePrice}€`);
-        console.log(`   - PRICING_RULES.sofa.seats['${seats}'] = ${PRICING_RULES.sofa.seats[seats]}`);
-        console.log(`   - PRICING_RULES.sofa.base = ${PRICING_RULES.sofa.base}`);
+        console.log(`Base price for ${seats} seats: ${basePrice}`);
 
         // Ensure we always have a valid base price
         if (!basePrice || basePrice <= 0) {
@@ -587,9 +544,12 @@
             console.warn(`Using fallback base price: ${basePrice}`);
         }
 
-        // SOFA QUANTITY IS ALWAYS 1 (no quantity control for sofas)
-        const quantity = 1;
-        console.log(`Quantity: ${quantity} (fixed)`);
+        // Get quantity
+        const quantitySpan = Array.from(document.querySelectorAll('span')).find(el =>
+            /^\d+$/.test(el.innerText) && el.className.includes('text-2xl')
+        );
+        const quantity = quantitySpan ? parseInt(quantitySpan.innerText) : 1;
+        console.log(`Quantity: ${quantity}`);
 
         // Calculate extras
         let extrasTotal = 0;
@@ -627,8 +587,6 @@
 
         // Update all total price displays (but not option labels or extra controls)
         let updatedCount = 0;
-        const priceElements = [];
-
         document.querySelectorAll('*').forEach(el => {
             if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
                 const priceRegex = /\d+([.,]\d{2})?\s*€/;
@@ -638,63 +596,16 @@
                                          el.className.includes('text-3xl');
                     const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                     const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
-                    const isExtraLabel = el.innerText.includes('+') && el.closest('label');
 
-                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice && !isExtraLabel) {
-                        const oldPrice = el.innerText;
+                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
                         el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
                         updatedCount++;
-                        priceElements.push({
-                            element: el.tagName,
-                            classes: el.className,
-                            oldPrice: oldPrice,
-                            newPrice: el.innerText
-                        });
                     }
                 }
             }
         });
 
         console.log(`✅ Updated ${updatedCount} price displays`);
-        if (priceElements.length > 0) {
-            console.log('📍 Updated elements:', priceElements);
-        }
-
-        // FORCE UPDATE: Also update ALL elements with prices that might be in summary/resume
-        // This catches elements that don't have the specific classes but should still be updated
-        setTimeout(() => {
-            document.querySelectorAll('*').forEach(el => {
-                if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
-                    const priceRegex = /\d+([.,]\d{2})?\s*€/;
-                    if (priceRegex.test(el.innerText)) {
-                        // Skip only option labels and extra controls
-                        const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
-                        const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
-                        const isSeatLabel = el.closest('label')?.textContent?.includes('Lugar');
-                        const isExtraLabel = el.innerText.includes('+') && el.closest('label');
-
-                        // Check if this might be a summary/total element
-                        const parent = el.parentElement;
-                        const isPossibleTotal = parent && (
-                            parent.className.includes('bg-') ||
-                            parent.className.includes('border') ||
-                            parent.className.includes('rounded') ||
-                            parent.className.includes('shadow') ||
-                            el.className.includes('text-') ||
-                            el.innerText.trim().endsWith('€')
-                        );
-
-                        if (!isOptionLabel && !isExtraPrice && !isSeatLabel && !isExtraLabel && isPossibleTotal) {
-                            const currentPrice = el.innerText.match(priceRegex);
-                            if (currentPrice && currentPrice[0] !== formattedPrice + ' €') {
-                                console.log(`🔄 Force updating: "${el.innerText}" -> "${formattedPrice} €"`);
-                                el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
-                            }
-                        }
-                    }
-                }
-            });
-        }, 100);
     }
 
     // ==========================================
@@ -756,70 +667,19 @@
         };
 
         function updateSeats(val) {
-            console.log(`🔧 Updating seats to: ${val}`);
             document.getElementById('custom-seats-value').innerText = val;
             const radio = hiddenContainer.querySelector(`input[value="${val}"]`);
             if (radio) {
                 radio.checked = true;
-
-                // Temporarily disable the mutation observer to prevent re-running customizations
-                const wasObserving = window.slObserverActive;
-                window.slObserverActive = false;
-
                 radio.dispatchEvent(new Event('change', { bubbles: true }));
                 radio.click();
-
-                // Re-enable observer after a short delay
-                setTimeout(() => {
-                    window.slObserverActive = wasObserving;
-                }, 200);
             }
-            console.log(`📊 Current PRICING_RULES.sofa.seats:`, PRICING_RULES.sofa.seats);
-            console.log(`💰 Price for ${val} seats should be: ${PRICING_RULES.sofa.seats[val]}€`);
-
-            // Only update price display, don't re-run all customizations
-            setTimeout(() => updatePriceDisplay(), 100);
+            updatePriceDisplay();
         }
     }
 
     // ==========================================
-    // 3.5. HIDE QUANTITY CONTROL FOR SOFAS
-    // ==========================================
-    function hideSofaQuantityControl() {
-        // Check if this is sofa service by looking for the custom seats control
-        const seatsControl = document.getElementById('custom-seats-value');
-        if (!seatsControl) return; // Not a sofa service
-
-        // Find all quantity controls (the +/- buttons around a number)
-        const allSpans = Array.from(document.querySelectorAll('span'));
-
-        // Find the quantity control (looks for number in text-2xl span that's NOT the seats control)
-        const quantitySpan = allSpans.find(el =>
-            /^\d+$/.test(el.innerText) &&
-            el.className.includes('text-2xl') &&
-            el.id !== 'custom-seats-value' // Exclude seats control
-        );
-
-        if (!quantitySpan) return;
-
-        // Hide the entire quantity control container
-        let quantityContainer = quantitySpan.closest('.flex.items-center.justify-center');
-        if (quantityContainer && !quantityContainer.classList.contains('sl-hidden')) {
-            quantityContainer.classList.add('sl-hidden');
-            quantityContainer.style.display = 'none';
-
-            // Also hide the "Quantidade" label if it exists
-            const quantityLabel = Array.from(document.querySelectorAll('label, div')).find(el =>
-                el.textContent.trim() === 'Quantidade' && el.children.length === 0
-            );
-            if (quantityLabel) {
-                quantityLabel.style.display = 'none';
-            }
-        }
-    }
-
-    // ==========================================
-    // 3.6. ADD ESPECIFICAÇÕES HEADER FOR CADEIRAS
+    // 3.5. ADD ESPECIFICAÇÕES HEADER FOR CADEIRAS
     // ==========================================
     function addChairsSpecificationsHeader() {
         // Check if this is cadeiras service
@@ -836,255 +696,6 @@
         )?.closest('.flex.items-start')?.parentElement;
 
         if (!checkboxContainer) return;
-    }
-
-    // ==========================================
-    // 3.7. HIDE "ADICIONAR OUTRO" BUTTON
-    // ==========================================
-    function hideAdicionarOutroButton() {
-        // Find and hide all "Adicionar outro" buttons
-        const allButtons = document.querySelectorAll('button');
-        allButtons.forEach(btn => {
-            const text = btn.textContent.trim();
-            if (text.includes('Adicionar outro') || text.includes('Adicionar Outro')) {
-                if (!btn.classList.contains('sl-hidden')) {
-                    btn.classList.add('sl-hidden');
-                    btn.style.display = 'none';
-                    console.log('✅ Hidden "Adicionar outro" button');
-                }
-            }
-        });
-    }
-
-    // ==========================================
-    // 3.8. FIX INDEPENDENT SOFA PRICING IN QUOTE
-    // ==========================================
-
-    // Global store for sofa configurations with unique IDs
-    window.SL_SOFA_REGISTRY = window.SL_SOFA_REGISTRY || {};
-
-    function fixIndependentSofaPricing() {
-        // When "Adicionar ao Orçamento" is clicked, capture the current sofa configuration
-        const addToQuoteButtons = document.querySelectorAll('button');
-
-        addToQuoteButtons.forEach(btn => {
-            const text = btn.textContent.trim();
-            if (text.includes('Adicionar ao Orçamento') && !btn.dataset.slPricingFixed) {
-                btn.dataset.slPricingFixed = 'true';
-
-                btn.addEventListener('click', function(e) {
-                    // Capture current sofa configuration BEFORE the click
-                    const seatsSpan = document.getElementById('custom-seats-value');
-                    if (seatsSpan) {
-                        const currentSeats = seatsSpan.innerText.trim();
-                        const currentPrice = PRICING_RULES.sofa.seats[currentSeats] || PRICING_RULES.sofa.base;
-
-                        // Capture extras with details
-                        let currentExtrasTotal = 0;
-                        const extrasList = [];
-
-                        document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
-                            const label = cb.closest('label') || cb.parentElement;
-                            if (!label) return;
-
-                            const container = label.closest('.flex.items-start') ||
-                                            label.closest('[class*="hover:bg-gray"]') ||
-                                            label.parentElement;
-                            const labelText = (container ? container.innerText : label.innerText).toLowerCase();
-
-                            // Get extra name
-                            const nameEl = container ? container.querySelector('.font-medium') : null;
-                            const extraName = nameEl ? nameEl.textContent.trim() : 'Extra';
-
-                            const match = labelText.match(/\+(\d+(?:[.,]\d+)?)\s*€/);
-                            if (match) {
-                                let extraPrice = parseFloat(match[1].replace(',', '.'));
-                                const qtyValueEl = container ? container.querySelector('.sl-extra-qty-value') : null;
-                                let qty = 1;
-
-                                if (qtyValueEl) {
-                                    qty = parseInt(qtyValueEl.textContent) || 1;
-                                    currentExtrasTotal += extraPrice * qty;
-                                } else {
-                                    currentExtrasTotal += extraPrice;
-                                }
-
-                                extrasList.push({
-                                    name: extraName,
-                                    price: extraPrice,
-                                    quantity: qty,
-                                    total: extraPrice * qty
-                                });
-                            }
-                        });
-
-                        const totalPrice = currentPrice + currentExtrasTotal;
-                        const uniqueId = 'sofa_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-                        // Store this configuration with unique ID
-                        const sofaConfig = {
-                            id: uniqueId,
-                            seats: currentSeats,
-                            basePrice: currentPrice,
-                            extras: extrasList,
-                            extrasTotal: currentExtrasTotal,
-                            totalPrice: totalPrice,
-                            timestamp: Date.now(),
-                            description: `Sofá ${currentSeats} lugar${currentSeats !== '1' ? 'es' : ''}`
-                        };
-
-                        // Store in global registry
-                        window.SL_SOFA_REGISTRY[uniqueId] = sofaConfig;
-
-                        console.log(`📦 Adding sofa to quote [ID: ${uniqueId}]:`, sofaConfig);
-                        console.log(`📊 Total sofas in registry: ${Object.keys(window.SL_SOFA_REGISTRY).length}`);
-
-                        // Also update session storage
-                        sessionStorage.setItem('sl_sofa_registry', JSON.stringify(window.SL_SOFA_REGISTRY));
-
-                        // After a short delay, inject the unique ID into the summary item
-                        setTimeout(() => {
-                            injectSofaIdIntoSummary(uniqueId, sofaConfig);
-                        }, 300);
-                    }
-                }, true); // Use capture phase to run before React's handler
-            }
-        });
-    }
-
-    // Inject unique ID and override price display in summary
-    function injectSofaIdIntoSummary(sofaId, config) {
-        // Find all summary items (sofas in the quote)
-        const summaryItems = document.querySelectorAll('[class*="bg-white"], [class*="border"], [class*="rounded"]');
-
-        summaryItems.forEach(item => {
-            const text = item.innerText || item.textContent;
-
-            // Look for sofa items that match our configuration
-            if (text.includes('Sofá') && text.includes('lugar') && !item.dataset.slSofaId) {
-                // Check if this is the item we just added (last one without ID)
-                const allSofaItems = Array.from(document.querySelectorAll('[data-sl-sofa-id]'));
-                const hasSofaItems = item.querySelector('[data-sl-sofa-id]');
-
-                if (!hasSofaItems && text.includes(config.seats + ' lugar')) {
-                    // Mark this item with our unique ID
-                    item.dataset.slSofaId = sofaId;
-                    item.dataset.slSofaSeats = config.seats;
-                    item.dataset.slSofaPrice = config.totalPrice;
-
-                    console.log(`✅ Marked summary item with ID: ${sofaId}, seats: ${config.seats}, price: ${config.totalPrice}€`);
-
-                    // Force update the price in this specific item
-                    updateSummaryItemPrice(item, config);
-                }
-            }
-        });
-    }
-
-    // Update price in a specific summary item
-    function updateSummaryItemPrice(item, config) {
-        const priceElements = item.querySelectorAll('*');
-
-        priceElements.forEach(el => {
-            if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
-                const priceRegex = /\d+([.,]\d{2})?\s*€/;
-                if (priceRegex.test(el.innerText)) {
-                    const formattedPrice = config.totalPrice.toFixed(2).replace('.', ',');
-                    const oldPrice = el.innerText;
-                    el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
-
-                    // Lock this price by marking it
-                    el.dataset.slLocked = 'true';
-                    el.dataset.slPrice = config.totalPrice;
-
-                    console.log(`💰 Updated price in summary: ${oldPrice} -> ${formattedPrice} €`);
-                }
-            }
-        });
-    }
-
-    // Monitor and maintain correct prices in summary
-    function maintainSummaryPrices() {
-        const summaryItems = document.querySelectorAll('[data-sl-sofa-id]');
-
-        summaryItems.forEach(item => {
-            const sofaId = item.dataset.slSofaId;
-            const config = window.SL_SOFA_REGISTRY[sofaId];
-
-            if (config) {
-                // Check all price elements in this item
-                const priceElements = item.querySelectorAll('[data-sl-locked="true"]');
-
-                priceElements.forEach(el => {
-                    const currentDisplayedPrice = el.dataset.slPrice;
-                    const correctPrice = config.totalPrice;
-
-                    if (currentDisplayedPrice != correctPrice) {
-                        const formattedPrice = correctPrice.toFixed(2).replace('.', ',');
-                        el.innerText = el.innerText.replace(/\d+([.,]\d{2})?\s*€/, formattedPrice + ' €');
-                        el.dataset.slPrice = correctPrice;
-                        console.log(`🔧 Corrected price for ${sofaId}: ${formattedPrice} €`);
-                    }
-                });
-            }
-        });
-    }
-
-    // ==========================================
-    // 3.5 INJECT EXTRA PRICES FROM DATABASE
-    // ==========================================
-    async function injectExtraPrices() {
-        try {
-            const extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
-            if (!extrasHeader) return;
-
-            const extrasContainer = extrasHeader.parentElement;
-            if (!extrasContainer) return;
-
-            // Fetch all extras from database
-            const headers = {
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json'
-            };
-
-            const resp = await fetch(`${SUPABASE_URL}/rest/v1/service_extras?select=extra_name,extra_price`, { headers });
-            if (!resp.ok) return;
-
-            const extras = await resp.json();
-            const extraPriceMap = {};
-            extras.forEach(extra => {
-                extraPriceMap[extra.extra_name.toLowerCase().trim()] = parseFloat(extra.extra_price);
-            });
-
-            // Find all extra items and inject prices
-            const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
-            extraItems.forEach(item => {
-                const nameEl = item.querySelector('.font-medium');
-                if (!nameEl) return;
-
-                const extraName = nameEl.textContent.trim().toLowerCase();
-                const price = extraPriceMap[extraName];
-
-                if (price !== undefined) {
-                    // Find the price text element in this item
-                    const priceEl = item.querySelector('[class*="text-[#deb052]"]') ||
-                                  Array.from(item.querySelectorAll('span')).find(s => s.textContent.includes('€'));
-
-                    if (priceEl) {
-                        priceEl.textContent = `+${price}€`;
-                    } else {
-                        // Create price element if not found
-                        const newPriceEl = document.createElement('span');
-                        newPriceEl.className = 'text-[#deb052]';
-                        newPriceEl.textContent = `+${price}€`;
-                        const flex1 = item.querySelector('.flex-1');
-                        if (flex1) flex1.appendChild(newPriceEl);
-                    }
-                }
-            });
-        } catch (err) {
-            console.warn('Could not inject extra prices:', err);
-        }
     }
 
     // ==========================================
@@ -1107,14 +718,10 @@
         const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
 
         extraItems.forEach(item => {
-            // Skip if already has quantity control
             if (item.querySelector('.sl-extra-qty-control')) return;
 
             const checkbox = item.querySelector('input[type="checkbox"]');
             if (!checkbox) return;
-
-            // Skip if this checkbox already has our listener
-            if (checkbox.dataset.slQtyListener) return;
 
             const nameEl = item.querySelector('.font-medium');
             if (!nameEl) return;
@@ -1148,28 +755,17 @@
 
                 qtyControl.style.display = checkbox.checked ? 'inline-flex' : 'none';
 
-                // Mark checkbox as having our listener to prevent duplicates
-                checkbox.dataset.slQtyListener = 'true';
-
-                // Use a single change handler
-                const changeHandler = () => {
+                checkbox.addEventListener('change', () => {
                     qtyControl.style.display = checkbox.checked ? 'inline-flex' : 'none';
                     if (!checkbox.checked) {
                         extraQuantities[extraKey] = 1;
                         qtyControl.querySelector('.sl-extra-qty-value').textContent = '1';
                     }
                     updatePriceDisplay();
-                };
+                });
 
-                checkbox.addEventListener('change', changeHandler);
-
-                // Minus button
-                const minusBtn = qtyControl.querySelector('.sl-qty-minus');
-                minusBtn.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-
+                qtyControl.querySelector('.sl-qty-minus').onclick = (e) => {
+                    e.preventDefault(); e.stopPropagation();
                     let val = extraQuantities[extraKey];
                     if (val > 1) {
                         val--;
@@ -1179,13 +775,8 @@
                     }
                 };
 
-                // Plus button
-                const plusBtn = qtyControl.querySelector('.sl-qty-plus');
-                plusBtn.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-
+                qtyControl.querySelector('.sl-qty-plus').onclick = (e) => {
+                    e.preventDefault(); e.stopPropagation();
                     let val = extraQuantities[extraKey];
                     if (val < 20) {
                         val++;
@@ -1542,15 +1133,11 @@
         if (!window.location.pathname.startsWith('/admin')) {
             reorganizeFormStructure();
             transformSeatsToNumeric();
-            hideSofaQuantityControl();
             addChairsSpecificationsHeader();
-            injectExtraPrices();
             addQuantityToExtras();
             attachPerSqmListeners();
             updatePriceDisplay();
             interceptOutrosClick();
-            hideAdicionarOutroButton();
-            fixIndependentSofaPricing();
         }
 
         if (window.location.pathname.startsWith('/admin')) {
@@ -1569,12 +1156,7 @@
     // ==========================================
     // MUTATION OBSERVER (faster, no flashing)
     // ==========================================
-    window.slObserverActive = true;
-
     const observer = new MutationObserver((mutations) => {
-        // Skip if observer is temporarily disabled
-        if (!window.slObserverActive) return;
-
         // Debounce: only run once per batch of mutations
         clearTimeout(window.slCustomizationTimeout);
         window.slCustomizationTimeout = setTimeout(applyAllCustomizations, 50);
@@ -1592,22 +1174,7 @@
     // Fallback interval (slower, for edge cases)
     setInterval(applyAllCustomizations, 2000);
 
-    // Listen for all changes that might trigger price updates
     document.addEventListener('click', () => setTimeout(updatePriceDisplay, 100));
-    document.addEventListener('change', () => setTimeout(updatePriceDisplay, 100));
-    document.addEventListener('input', () => setTimeout(updatePriceDisplay, 150));
-
-    // Additional aggressive update for sofa prices
-    setInterval(() => {
-        const seatsControl = document.getElementById('custom-seats-value');
-        if (seatsControl) {
-            // This is a sofa - ensure price is always up to date
-            updatePriceDisplay();
-        }
-
-        // Maintain correct prices in summary for each sofa
-        maintainSummaryPrices();
-    }, 500);
 })();
 </script>
 
