@@ -843,6 +843,10 @@
     // ==========================================
     // 3.8. FIX INDEPENDENT SOFA PRICING IN QUOTE
     // ==========================================
+
+    // Global store for sofa configurations with unique IDs
+    window.SL_SOFA_REGISTRY = window.SL_SOFA_REGISTRY || {};
+
     function fixIndependentSofaPricing() {
         // When "Adicionar ao Orçamento" is clicked, capture the current sofa configuration
         const addToQuoteButtons = document.querySelectorAll('button');
@@ -852,9 +856,6 @@
             if (text.includes('Adicionar ao Orçamento') && !btn.dataset.slPricingFixed) {
                 btn.dataset.slPricingFixed = 'true';
 
-                // Clone the original click handler
-                const originalHandler = btn.onclick;
-
                 btn.addEventListener('click', function(e) {
                     // Capture current sofa configuration BEFORE the click
                     const seatsSpan = document.getElementById('custom-seats-value');
@@ -862,8 +863,10 @@
                         const currentSeats = seatsSpan.innerText.trim();
                         const currentPrice = PRICING_RULES.sofa.seats[currentSeats] || PRICING_RULES.sofa.base;
 
-                        // Calculate extras
+                        // Capture extras with details
                         let currentExtrasTotal = 0;
+                        const extrasList = [];
+
                         document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
                             const label = cb.closest('label') || cb.parentElement;
                             if (!label) return;
@@ -873,48 +876,140 @@
                                             label.parentElement;
                             const labelText = (container ? container.innerText : label.innerText).toLowerCase();
 
+                            // Get extra name
+                            const nameEl = container ? container.querySelector('.font-medium') : null;
+                            const extraName = nameEl ? nameEl.textContent.trim() : 'Extra';
+
                             const match = labelText.match(/\+(\d+(?:[.,]\d+)?)\s*€/);
                             if (match) {
                                 let extraPrice = parseFloat(match[1].replace(',', '.'));
                                 const qtyValueEl = container ? container.querySelector('.sl-extra-qty-value') : null;
+                                let qty = 1;
 
                                 if (qtyValueEl) {
-                                    const qty = parseInt(qtyValueEl.textContent) || 1;
+                                    qty = parseInt(qtyValueEl.textContent) || 1;
                                     currentExtrasTotal += extraPrice * qty;
                                 } else {
                                     currentExtrasTotal += extraPrice;
                                 }
+
+                                extrasList.push({
+                                    name: extraName,
+                                    price: extraPrice,
+                                    quantity: qty,
+                                    total: extraPrice * qty
+                                });
                             }
                         });
 
                         const totalPrice = currentPrice + currentExtrasTotal;
+                        const uniqueId = 'sofa_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-                        // Store this configuration in a data attribute or global store
-                        console.log(`📦 Adding sofa to quote: ${currentSeats} seats, base: ${currentPrice}€, extras: ${currentExtrasTotal}€, total: ${totalPrice}€`);
-
-                        // Store in session storage to preserve between navigations
+                        // Store this configuration with unique ID
                         const sofaConfig = {
+                            id: uniqueId,
                             seats: currentSeats,
                             basePrice: currentPrice,
+                            extras: extrasList,
                             extrasTotal: currentExtrasTotal,
                             totalPrice: totalPrice,
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
+                            description: `Sofá ${currentSeats} lugar${currentSeats !== '1' ? 'es' : ''}`
                         };
 
-                        // Get existing sofa configs
-                        let sofaConfigs = [];
-                        try {
-                            const stored = sessionStorage.getItem('sl_sofa_configs');
-                            if (stored) sofaConfigs = JSON.parse(stored);
-                        } catch(e) {}
+                        // Store in global registry
+                        window.SL_SOFA_REGISTRY[uniqueId] = sofaConfig;
 
-                        // Add new config
-                        sofaConfigs.push(sofaConfig);
-                        sessionStorage.setItem('sl_sofa_configs', JSON.stringify(sofaConfigs));
+                        console.log(`📦 Adding sofa to quote [ID: ${uniqueId}]:`, sofaConfig);
+                        console.log(`📊 Total sofas in registry: ${Object.keys(window.SL_SOFA_REGISTRY).length}`);
 
-                        console.log(`📊 Total sofas in quote: ${sofaConfigs.length}`);
+                        // Also update session storage
+                        sessionStorage.setItem('sl_sofa_registry', JSON.stringify(window.SL_SOFA_REGISTRY));
+
+                        // After a short delay, inject the unique ID into the summary item
+                        setTimeout(() => {
+                            injectSofaIdIntoSummary(uniqueId, sofaConfig);
+                        }, 300);
                     }
                 }, true); // Use capture phase to run before React's handler
+            }
+        });
+    }
+
+    // Inject unique ID and override price display in summary
+    function injectSofaIdIntoSummary(sofaId, config) {
+        // Find all summary items (sofas in the quote)
+        const summaryItems = document.querySelectorAll('[class*="bg-white"], [class*="border"], [class*="rounded"]');
+
+        summaryItems.forEach(item => {
+            const text = item.innerText || item.textContent;
+
+            // Look for sofa items that match our configuration
+            if (text.includes('Sofá') && text.includes('lugar') && !item.dataset.slSofaId) {
+                // Check if this is the item we just added (last one without ID)
+                const allSofaItems = Array.from(document.querySelectorAll('[data-sl-sofa-id]'));
+                const hasSofaItems = item.querySelector('[data-sl-sofa-id]');
+
+                if (!hasSofaItems && text.includes(config.seats + ' lugar')) {
+                    // Mark this item with our unique ID
+                    item.dataset.slSofaId = sofaId;
+                    item.dataset.slSofaSeats = config.seats;
+                    item.dataset.slSofaPrice = config.totalPrice;
+
+                    console.log(`✅ Marked summary item with ID: ${sofaId}, seats: ${config.seats}, price: ${config.totalPrice}€`);
+
+                    // Force update the price in this specific item
+                    updateSummaryItemPrice(item, config);
+                }
+            }
+        });
+    }
+
+    // Update price in a specific summary item
+    function updateSummaryItemPrice(item, config) {
+        const priceElements = item.querySelectorAll('*');
+
+        priceElements.forEach(el => {
+            if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
+                const priceRegex = /\d+([.,]\d{2})?\s*€/;
+                if (priceRegex.test(el.innerText)) {
+                    const formattedPrice = config.totalPrice.toFixed(2).replace('.', ',');
+                    const oldPrice = el.innerText;
+                    el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
+
+                    // Lock this price by marking it
+                    el.dataset.slLocked = 'true';
+                    el.dataset.slPrice = config.totalPrice;
+
+                    console.log(`💰 Updated price in summary: ${oldPrice} -> ${formattedPrice} €`);
+                }
+            }
+        });
+    }
+
+    // Monitor and maintain correct prices in summary
+    function maintainSummaryPrices() {
+        const summaryItems = document.querySelectorAll('[data-sl-sofa-id]');
+
+        summaryItems.forEach(item => {
+            const sofaId = item.dataset.slSofaId;
+            const config = window.SL_SOFA_REGISTRY[sofaId];
+
+            if (config) {
+                // Check all price elements in this item
+                const priceElements = item.querySelectorAll('[data-sl-locked="true"]');
+
+                priceElements.forEach(el => {
+                    const currentDisplayedPrice = el.dataset.slPrice;
+                    const correctPrice = config.totalPrice;
+
+                    if (currentDisplayedPrice != correctPrice) {
+                        const formattedPrice = correctPrice.toFixed(2).replace('.', ',');
+                        el.innerText = el.innerText.replace(/\d+([.,]\d{2})?\s*€/, formattedPrice + ' €');
+                        el.dataset.slPrice = correctPrice;
+                        console.log(`🔧 Corrected price for ${sofaId}: ${formattedPrice} €`);
+                    }
+                });
             }
         });
     }
@@ -1410,6 +1505,9 @@
             // This is a sofa - ensure price is always up to date
             updatePriceDisplay();
         }
+
+        // Maintain correct prices in summary for each sofa
+        maintainSummaryPrices();
     }, 500);
 })();
 </script>
