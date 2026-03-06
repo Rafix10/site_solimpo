@@ -595,6 +595,19 @@
         const extrasContainer = extrasHeader.parentElement;
         if (!extrasContainer) return;
 
+        // Add "Especificações" label above extras if not already added
+        if (!extrasContainer.querySelector('.sl-extras-spec-label')) {
+            const specLabel = document.createElement('h4');
+            specLabel.className = 'text-lg font-semibold mb-4 sl-extras-spec-label';
+            specLabel.textContent = 'Especificações';
+            specLabel.style.color = '#000000';
+            specLabel.style.fontWeight = '600';
+            specLabel.style.fontSize = '1.125rem';
+
+            // Insert before the extras header
+            extrasContainer.insertBefore(specLabel, extrasHeader);
+        }
+
         const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
 
         extraItems.forEach(item => {
