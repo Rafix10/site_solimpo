@@ -360,16 +360,51 @@
     // 2. PRICE DISPLAY UPDATE
     // ==========================================
     function updatePriceDisplay() {
-        // Skip if this is a per_sqm service (like tapetes, cortinados, vidros) - let React handle it
+        // FOR per_sqm services: Calculate price = base_price * width * height * quantity
         const widthInput = document.querySelector('input[name="width"]');
         const heightInput = document.querySelector('input[name="height"]');
-        const hasNumberInputs = document.querySelector('input[type="number"][placeholder*="Ex:"]');
         const hasLarguraLabel = Array.from(document.querySelectorAll('label')).some(l =>
-            l.textContent.includes('Largura') || l.textContent.includes('Comprimento')
+            l.textContent.includes('Largura') || l.textContent.includes('Comprimento') || l.textContent.includes('Altura')
         );
 
-        if (widthInput || heightInput || hasNumberInputs || hasLarguraLabel) {
-            return; // This is a per_sqm service, don't interfere
+        if ((widthInput || heightInput || hasLarguraLabel) && widthInput && heightInput) {
+            // This is a per_sqm service - calculate properly
+            const width = parseFloat(widthInput.value) || 0;
+            const height = parseFloat(heightInput.value) || 0;
+            const quantitySpan = Array.from(document.querySelectorAll('span')).find(el =>
+                /^\d+$/.test(el.innerText) && el.className.includes('text-2xl')
+            );
+            const quantity = quantitySpan ? parseInt(quantitySpan.innerText) : 1;
+
+            // Get base price from service (check all price displays for the base)
+            let basePrice = 0;
+            const allText = document.body.innerText;
+            if (allText.includes('Tapetes')) basePrice = 12;
+            else if (allText.includes('Cortinados')) basePrice = 6.5;
+            else if (allText.includes('Vidros')) basePrice = 15;
+
+            if (basePrice > 0 && width > 0 && height > 0) {
+                const sqm = width * height;
+                const total = (basePrice * sqm * quantity).toFixed(2).replace('.', ',');
+
+                // Update all price displays
+                document.querySelectorAll('*').forEach(el => {
+                    if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
+                        const priceRegex = /\d+([.,]\d{2})?\s*€/;
+                        if (priceRegex.test(el.innerText)) {
+                            const isTotalDisplay = el.closest('.bg-gray-50') ||
+                                                 el.className.includes('font-bold') ||
+                                                 el.className.includes('text-3xl');
+                            const isOptionLabel = el.closest('label');
+
+                            if (isTotalDisplay && !isOptionLabel) {
+                                el.innerText = el.innerText.replace(priceRegex, total + ' €');
+                            }
+                        }
+                    }
+                });
+            }
+            return; // Done with per_sqm service
         }
 
         const quantitySpan = Array.from(document.querySelectorAll('span')).find(el => /^\d+$/.test(el.innerText) && el.className.includes('text-2xl'));
@@ -904,6 +939,26 @@
     }
 
     // ==========================================
+    // PER_SQM INPUTS LISTENER
+    // ==========================================
+    function attachPerSqmListeners() {
+        const widthInput = document.querySelector('input[name="width"]');
+        const heightInput = document.querySelector('input[name="height"]');
+
+        if (widthInput && !widthInput.dataset.slListener) {
+            widthInput.dataset.slListener = 'true';
+            widthInput.addEventListener('input', () => setTimeout(updatePriceDisplay, 100));
+            widthInput.addEventListener('change', () => setTimeout(updatePriceDisplay, 100));
+        }
+
+        if (heightInput && !heightInput.dataset.slListener) {
+            heightInput.dataset.slListener = 'true';
+            heightInput.addEventListener('input', () => setTimeout(updatePriceDisplay, 100));
+            heightInput.addEventListener('change', () => setTimeout(updatePriceDisplay, 100));
+        }
+    }
+
+    // ==========================================
     // MAIN LOOP
     // ==========================================
     setInterval(() => {
@@ -914,6 +969,7 @@
             transformSeatsToNumeric();
             addChairsSpecificationsHeader();
             addQuantityToExtras();
+            attachPerSqmListeners();
             updatePriceDisplay();
             interceptOutrosClick();
         }
