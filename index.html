@@ -658,6 +658,7 @@
                             el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
                             // Store the numeric price value for React to read
                             el.setAttribute('data-price', finalPrice.toFixed(2));
+                            console.log(`💰 Set data-price="${finalPrice.toFixed(2)}" on element:`, el);
                             updatedCount++;
                             priceElements.push({
                                 element: el.tagName,
@@ -1325,6 +1326,76 @@
     document.addEventListener('click', () => setTimeout(updatePriceDisplay, 100));
     document.addEventListener('change', () => setTimeout(updatePriceDisplay, 100));
     document.addEventListener('input', () => setTimeout(updatePriceDisplay, 150));
+
+    // Store current calculated price globally for React to access
+    window.__SOFALIMPO_CURRENT_PRICE__ = null;
+
+    // Override Element.prototype methods to inject our price
+    const originalInnerTextGetter = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerText').get;
+    const originalTextContentGetter = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent').get;
+
+    Object.defineProperty(HTMLElement.prototype, 'innerText', {
+        get: function() {
+            const originalValue = originalInnerTextGetter.call(this);
+
+            // If this element has data-price and React is reading it, inject the correct price
+            if (this.hasAttribute && this.hasAttribute('data-price') && originalValue.includes('€')) {
+                const dataPrice = this.getAttribute('data-price');
+                if (dataPrice && window.__SOFALIMPO_READING_PRICE__) {
+                    const formattedPrice = parseFloat(dataPrice).toFixed(2).replace('.', ',');
+                    console.log(`🔧 Intercepted innerText read: returning "${formattedPrice} €" instead of "${originalValue}"`);
+                    return formattedPrice + ' €';
+                }
+            }
+            return originalValue;
+        },
+        configurable: true
+    });
+
+    Object.defineProperty(Node.prototype, 'textContent', {
+        get: function() {
+            const originalValue = originalTextContentGetter.call(this);
+
+            // If this element has data-price and React is reading it, inject the correct price
+            if (this.hasAttribute && this.hasAttribute('data-price') && originalValue.includes('€')) {
+                const dataPrice = this.getAttribute('data-price');
+                if (dataPrice && window.__SOFALIMPO_READING_PRICE__) {
+                    const formattedPrice = parseFloat(dataPrice).toFixed(2).replace('.', ',');
+                    console.log(`🔧 Intercepted textContent read: returning "${formattedPrice} €" instead of "${originalValue}"`);
+                    return formattedPrice + ' €';
+                }
+            }
+            return originalValue;
+        },
+        configurable: true
+    });
+
+    // Intercept clicks on "Adicionar ao Orçamento" button
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (btn && (btn.textContent.includes('Adicionar') || btn.textContent.includes('Orçamento'))) {
+            console.log('🎯 "Adicionar ao Orçamento" clicked!');
+
+            // Enable price interception
+            window.__SOFALIMPO_READING_PRICE__ = true;
+
+            // Find and store the price
+            const formContainer = document.querySelector('form') || document.querySelector('[class*="space-y-6"]');
+            if (formContainer) {
+                const priceEl = formContainer.querySelector('[data-price]');
+                if (priceEl) {
+                    const price = parseFloat(priceEl.getAttribute('data-price'));
+                    console.log(`💰 Stored price for React: ${price}`);
+                    window.__SOFALIMPO_CURRENT_PRICE__ = price;
+                }
+            }
+
+            // Disable after 500ms
+            setTimeout(() => {
+                window.__SOFALIMPO_READING_PRICE__ = false;
+            }, 500);
+        }
+    }, true);
 
     // Additional aggressive update for sofa prices
     setInterval(() => {
