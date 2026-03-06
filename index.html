@@ -490,8 +490,9 @@
                                                  el.className.includes('font-bold') ||
                                                  el.className.includes('text-3xl');
                             const isOptionLabel = el.closest('label');
+                            const isExtraLabel = el.innerText.includes('+') && el.closest('label');
 
-                            if (isTotalDisplay && !isOptionLabel) {
+                            if (isTotalDisplay && !isOptionLabel && !isExtraLabel) {
                                 el.innerText = el.innerText.replace(priceRegex, total + ' €');
                             }
                         }
@@ -546,8 +547,9 @@
                                              el.className.includes('text-3xl');
                         const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                         const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+                        const isExtraLabel = el.innerText.includes('+') && el.closest('label');
 
-                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice && !isExtraLabel) {
                             el.innerText = el.innerText.replace(priceRegex, total + ' €');
                         }
                     }
@@ -636,8 +638,9 @@
                                          el.className.includes('text-3xl');
                     const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                     const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+                    const isExtraLabel = el.innerText.includes('+') && el.closest('label');
 
-                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice && !isExtraLabel) {
                         const oldPrice = el.innerText;
                         el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
                         updatedCount++;
@@ -668,6 +671,7 @@
                         const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                         const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
                         const isSeatLabel = el.closest('label')?.textContent?.includes('Lugar');
+                        const isExtraLabel = el.innerText.includes('+') && el.closest('label');
 
                         // Check if this might be a summary/total element
                         const parent = el.parentElement;
@@ -680,7 +684,7 @@
                             el.innerText.trim().endsWith('€')
                         );
 
-                        if (!isOptionLabel && !isExtraPrice && !isSeatLabel && isPossibleTotal) {
+                        if (!isOptionLabel && !isExtraPrice && !isSeatLabel && !isExtraLabel && isPossibleTotal) {
                             const currentPrice = el.innerText.match(priceRegex);
                             if (currentPrice && currentPrice[0] !== formattedPrice + ' €') {
                                 console.log(`🔄 Force updating: "${el.innerText}" -> "${formattedPrice} €"`);
