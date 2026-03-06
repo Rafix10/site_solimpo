@@ -406,7 +406,17 @@
     // 2. PRICE DISPLAY UPDATE
     // ==========================================
     function updatePriceDisplay() {
-        // FOR per_sqm services: Calculate price = base_price * width * height * quantity
+        // PRIORITY 1: Check if this is a SOFA service first
+        const seatsSpan = document.getElementById('custom-seats-value');
+        const hasSeatsControl = seatsSpan !== null;
+
+        if (hasSeatsControl) {
+            // This is SOFA - use dedicated sofa calculation
+            updateSofaPrice();
+            return;
+        }
+
+        // PRIORITY 2: Check for per_sqm services (Tapetes, Cortinados, Vidros)
         const widthInput = document.querySelector('input[name="width"]');
         const heightInput = document.querySelector('input[name="height"]');
         const hasLarguraLabel = Array.from(document.querySelectorAll('label')).some(l =>
@@ -453,6 +463,7 @@
             return; // Done with per_sqm service
         }
 
+        // PRIORITY 3: Other services (Colchao, etc.)
         const quantitySpan = Array.from(document.querySelectorAll('span')).find(el => /^\d+$/.test(el.innerText) && el.className.includes('text-2xl'));
         if (!quantitySpan) return;
 
@@ -460,23 +471,19 @@
         let basePrice = 0;
         let extrasTotal = 0;
 
+        // Check for Colchao
         const selectedSize = document.querySelector('input[name="size"]:checked');
         if (selectedSize) {
             basePrice = selectedSize.value === 'casal' ? PRICING_RULES.colchao.casal : PRICING_RULES.colchao.solteiro;
         }
 
-        const seatsSpan = document.getElementById('custom-seats-value');
-        if (seatsSpan) {
-            const seats = seatsSpan.innerText;
-            basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
-        }
-
+        // Calculate extras
         document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
             const label = cb.closest('label') || cb.parentElement;
             if (!label) return;
             const container = label.closest('.flex.items-start') || label.closest('[class*="hover:bg-gray"]') || label.parentElement;
             const labelText = (container ? container.innerText : label.innerText).toLowerCase();
-            
+
             const match = labelText.match(/\+(\d+(?:[.,]\d+)?)\s*€/);
             if (match) {
                 let extraPrice = parseFloat(match[1].replace(',', '.'));
@@ -496,12 +503,12 @@
                 if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
                     const priceRegex = /\d+([.,]\d{2})?\s*€/;
                     if (priceRegex.test(el.innerText)) {
-                        const isTotalDisplay = el.closest('.bg-gray-50') || 
-                                             el.className.includes('font-bold') || 
+                        const isTotalDisplay = el.closest('.bg-gray-50') ||
+                                             el.className.includes('font-bold') ||
                                              el.className.includes('text-3xl');
                         const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                         const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
-                        
+
                         if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
                             el.innerText = el.innerText.replace(priceRegex, total + ' €');
                         }
@@ -509,6 +516,96 @@
                 }
             });
         }
+    }
+
+    // ==========================================
+    // 2.1. DEDICATED SOFA PRICE CALCULATION
+    // ==========================================
+    function updateSofaPrice() {
+        console.log("🛋️ Calculating SOFA price...");
+
+        // Get seats value
+        const seatsSpan = document.getElementById('custom-seats-value');
+        if (!seatsSpan) {
+            console.warn("Seats span not found");
+            return;
+        }
+
+        const seats = seatsSpan.innerText.trim();
+        console.log(`Seats: ${seats}`);
+
+        // Get base price for this number of seats
+        let basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
+        console.log(`Base price for ${seats} seats: ${basePrice}`);
+
+        // Ensure we always have a valid base price
+        if (!basePrice || basePrice <= 0) {
+            basePrice = PRICING_RULES.sofa.base;
+            console.warn(`Using fallback base price: ${basePrice}`);
+        }
+
+        // Get quantity
+        const quantitySpan = Array.from(document.querySelectorAll('span')).find(el =>
+            /^\d+$/.test(el.innerText) && el.className.includes('text-2xl')
+        );
+        const quantity = quantitySpan ? parseInt(quantitySpan.innerText) : 1;
+        console.log(`Quantity: ${quantity}`);
+
+        // Calculate extras
+        let extrasTotal = 0;
+        document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+            const label = cb.closest('label') || cb.parentElement;
+            if (!label) return;
+
+            const container = label.closest('.flex.items-start') ||
+                            label.closest('[class*="hover:bg-gray"]') ||
+                            label.parentElement;
+            const labelText = (container ? container.innerText : label.innerText).toLowerCase();
+
+            const match = labelText.match(/\+(\d+(?:[.,]\d+)?)\s*€/);
+            if (match) {
+                let extraPrice = parseFloat(match[1].replace(',', '.'));
+                const qtyValueEl = container ? container.querySelector('.sl-extra-qty-value') : null;
+
+                if (qtyValueEl) {
+                    const qty = parseInt(qtyValueEl.textContent) || 1;
+                    extrasTotal += extraPrice * qty;
+                    console.log(`Extra with quantity: ${extraPrice} x ${qty} = ${extraPrice * qty}`);
+                } else {
+                    extrasTotal += extraPrice;
+                    console.log(`Extra: ${extraPrice}`);
+                }
+            }
+        });
+
+        console.log(`Extras total: ${extrasTotal}`);
+
+        // Calculate final price
+        const finalPrice = (basePrice + extrasTotal) * quantity;
+        const formattedPrice = finalPrice.toFixed(2).replace('.', ',');
+        console.log(`Final price: ${basePrice} + ${extrasTotal} x ${quantity} = ${formattedPrice} €`);
+
+        // Update all total price displays (but not option labels or extra controls)
+        let updatedCount = 0;
+        document.querySelectorAll('*').forEach(el => {
+            if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
+                const priceRegex = /\d+([.,]\d{2})?\s*€/;
+                if (priceRegex.test(el.innerText)) {
+                    const isTotalDisplay = el.closest('.bg-gray-50') ||
+                                         el.className.includes('font-bold') ||
+                                         el.className.includes('text-3xl');
+                    const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
+                    const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+
+                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                        el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
+                        updatedCount++;
+                    }
+                }
+            }
+        });
+
+        console.log(`✅ Updated ${updatedCount} price displays`);
     }
 
     // ==========================================
