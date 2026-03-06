@@ -831,5 +831,81 @@
 })();
 </script>
 
+<script>
+(function() {
+    // Force navbar visibility on all pages, especially /empresas
+    // This handles the case where React doesn't render navbar for certain routes
+
+    const checkAndFixNavbar = () => {
+        const root = document.getElementById('root');
+        if (!root) return;
+
+        // Get the current pathname
+        const pathname = window.location.pathname;
+
+        // Look for navbar in the DOM
+        const navbar = root.querySelector('nav');
+
+        // If we're on /empresas but navbar is hidden or missing, we need to force it visible
+        if (pathname === '/empresas' || pathname.startsWith('/empresas')) {
+            // Find any nav element and ensure it's visible
+            const navElements = root.querySelectorAll('nav, [role="navigation"]');
+            navElements.forEach(nav => {
+                nav.style.display = 'block';
+                nav.style.visibility = 'visible';
+                nav.style.opacity = '1';
+                nav.style.zIndex = '50';
+                nav.style.position = 'fixed';
+                nav.style.top = '0';
+                nav.style.width = '100%';
+                nav.style.left = '0';
+                nav.style.right = '0';
+            });
+
+            // Also check for nav in any parent
+            let parent = root.parentElement;
+            while (parent) {
+                const parentNav = parent.querySelector('nav, [role="navigation"]');
+                if (parentNav && parentNav.style.display === 'none') {
+                    parentNav.style.display = 'block';
+                    parentNav.style.visibility = 'visible';
+                    parentNav.style.opacity = '1';
+                }
+                parent = parent.parentElement;
+            }
+        }
+    };
+
+    // Check on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkAndFixNavbar);
+    } else {
+        checkAndFixNavbar();
+    }
+
+    // Check every time route changes
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function(...args) {
+        originalPushState.apply(this, args);
+        setTimeout(checkAndFixNavbar, 100);
+    };
+
+    window.history.replaceState = function(...args) {
+        originalReplaceState.apply(this, args);
+        setTimeout(checkAndFixNavbar, 100);
+    };
+
+    // Also listen to popstate (back/forward buttons)
+    window.addEventListener('popstate', () => {
+        setTimeout(checkAndFixNavbar, 100);
+    });
+
+    // Check frequently in case React renders dynamically
+    setInterval(checkAndFixNavbar, 500);
+})();
+</script>
+
 </body>
 </html>
