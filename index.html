@@ -1031,6 +1031,63 @@
     }
 
     // ==========================================
+    // 3.5 INJECT EXTRA PRICES FROM DATABASE
+    // ==========================================
+    async function injectExtraPrices() {
+        try {
+            const extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
+            if (!extrasHeader) return;
+
+            const extrasContainer = extrasHeader.parentElement;
+            if (!extrasContainer) return;
+
+            // Fetch all extras from database
+            const headers = {
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            };
+
+            const resp = await fetch(`${SUPABASE_URL}/rest/v1/service_extras?select=extra_name,extra_price`, { headers });
+            if (!resp.ok) return;
+
+            const extras = await resp.json();
+            const extraPriceMap = {};
+            extras.forEach(extra => {
+                extraPriceMap[extra.extra_name.toLowerCase().trim()] = parseFloat(extra.extra_price);
+            });
+
+            // Find all extra items and inject prices
+            const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
+            extraItems.forEach(item => {
+                const nameEl = item.querySelector('.font-medium');
+                if (!nameEl) return;
+
+                const extraName = nameEl.textContent.trim().toLowerCase();
+                const price = extraPriceMap[extraName];
+
+                if (price !== undefined) {
+                    // Find the price text element in this item
+                    const priceEl = item.querySelector('[class*="text-[#deb052]"]') ||
+                                  Array.from(item.querySelectorAll('span')).find(s => s.textContent.includes('€'));
+
+                    if (priceEl) {
+                        priceEl.textContent = `+${price}€`;
+                    } else {
+                        // Create price element if not found
+                        const newPriceEl = document.createElement('span');
+                        newPriceEl.className = 'text-[#deb052]';
+                        newPriceEl.textContent = `+${price}€`;
+                        const flex1 = item.querySelector('.flex-1');
+                        if (flex1) flex1.appendChild(newPriceEl);
+                    }
+                }
+            });
+        } catch (err) {
+            console.warn('Could not inject extra prices:', err);
+        }
+    }
+
+    // ==========================================
     // 4. ADD QUANTITY CONTROLS TO EXTRAS
     // ==========================================
     function addQuantityToExtras() {
@@ -1487,6 +1544,7 @@
             transformSeatsToNumeric();
             hideSofaQuantityControl();
             addChairsSpecificationsHeader();
+            injectExtraPrices();
             addQuantityToExtras();
             attachPerSqmListeners();
             updatePriceDisplay();
