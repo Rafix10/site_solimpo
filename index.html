@@ -888,11 +888,11 @@
                         width: 100%;
                     }
                 </style>
-                <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 80px;">
+                <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
                     <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none; transition: opacity 0.2s;">
                         <img src="/public/logo.png" alt="SofáLimpo" style="height: 80px; width: auto;">
                     </a>
-                    <div style="display: flex; gap: 32px; align-items: center;">
+                    <div style="display: flex; gap: 32px; align-items: center; justify-content: center; flex: 1; margin-left: 40px;">
                         <a href="/" class="nav-link">Início</a>
                         <a href="/sobre" class="nav-link">Sobre</a>
                         <a href="/empresas" class="nav-link active">Empresas</a>
@@ -909,18 +909,77 @@
         }
     };
 
+    const injectFooter = () => {
+        const pathname = window.location.pathname;
+
+        if (pathname === '/empresas' || pathname.startsWith('/empresas')) {
+            if (document.getElementById('sl-injected-footer')) return;
+
+            const footer = document.createElement('footer');
+            footer.id = 'sl-injected-footer';
+            footer.style.backgroundColor = '#1a1a2e';
+            footer.style.color = '#ffffff';
+            footer.style.padding = '48px 32px';
+            footer.style.marginTop = '60px';
+            footer.style.borderTop = '1px solid #2d2d44';
+
+            footer.innerHTML = `
+                <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px;">
+                    <div>
+                        <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: #deb052;">Sobre</h4>
+                        <p style="color: #b0b0b0; line-height: 1.6; font-size: 0.95rem;">
+                            SofáLimpo oferece serviços profissionais de limpeza e higienização para sofás, colchões e móveis.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: #deb052;">Contacto</h4>
+                        <p style="color: #b0b0b0; margin-bottom: 8px;">
+                            <strong>Telefone:</strong> <a href="tel:+351935798081" style="color: #deb052; text-decoration: none;">935 798 081</a>
+                        </p>
+                        <p style="color: #b0b0b0; margin-bottom: 8px;">
+                            <strong>Email:</strong> <a href="mailto:geral@sofalimpo.pt" style="color: #deb052; text-decoration: none;">geral@sofalimpo.pt</a>
+                        </p>
+                        <p style="color: #b0b0b0;">
+                            <strong>WhatsApp:</strong> <a href="https://wa.me/351935798081" target="_blank" style="color: #deb052; text-decoration: none;">Enviar mensagem</a>
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: #deb052;">Horários</h4>
+                        <p style="color: #b0b0b0; line-height: 1.8; font-size: 0.95rem;">
+                            <strong>Segunda a Sexta:</strong><br>08:00 - 18:00<br><br>
+                            <strong>Sábado:</strong><br>09:00 - 15:00<br><br>
+                            <strong>Domingo:</strong><br>Fechado
+                        </p>
+                    </div>
+                </div>
+                <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid #2d2d44; text-align: center; color: #6b7280; font-size: 0.9rem;">
+                    <p>&copy; 2025 SofáLimpo. Todos os direitos reservados.</p>
+                </div>
+            `;
+
+            document.body.appendChild(footer);
+        }
+    };
+
     // Run when DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', injectNavbarOnEmpresas);
+        document.addEventListener('DOMContentLoaded', () => {
+            injectNavbarOnEmpresas();
+            injectFooter();
+        });
     } else {
         injectNavbarOnEmpresas();
+        injectFooter();
     }
 
     // Also monitor route changes
     const originalPushState = window.history.pushState;
     window.history.pushState = function(...args) {
         originalPushState.apply(this, args);
-        setTimeout(injectNavbarOnEmpresas, 100);
+        setTimeout(() => {
+            injectNavbarOnEmpresas();
+            injectFooter();
+        }, 100);
     };
 })();
 </script>
