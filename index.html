@@ -823,6 +823,103 @@
     }
 
     // ==========================================
+    // 3.7. HIDE "ADICIONAR OUTRO" BUTTON
+    // ==========================================
+    function hideAdicionarOutroButton() {
+        // Find and hide all "Adicionar outro" buttons
+        const allButtons = document.querySelectorAll('button');
+        allButtons.forEach(btn => {
+            const text = btn.textContent.trim();
+            if (text.includes('Adicionar outro') || text.includes('Adicionar Outro')) {
+                if (!btn.classList.contains('sl-hidden')) {
+                    btn.classList.add('sl-hidden');
+                    btn.style.display = 'none';
+                    console.log('✅ Hidden "Adicionar outro" button');
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // 3.8. FIX INDEPENDENT SOFA PRICING IN QUOTE
+    // ==========================================
+    function fixIndependentSofaPricing() {
+        // When "Adicionar ao Orçamento" is clicked, capture the current sofa configuration
+        const addToQuoteButtons = document.querySelectorAll('button');
+
+        addToQuoteButtons.forEach(btn => {
+            const text = btn.textContent.trim();
+            if (text.includes('Adicionar ao Orçamento') && !btn.dataset.slPricingFixed) {
+                btn.dataset.slPricingFixed = 'true';
+
+                // Clone the original click handler
+                const originalHandler = btn.onclick;
+
+                btn.addEventListener('click', function(e) {
+                    // Capture current sofa configuration BEFORE the click
+                    const seatsSpan = document.getElementById('custom-seats-value');
+                    if (seatsSpan) {
+                        const currentSeats = seatsSpan.innerText.trim();
+                        const currentPrice = PRICING_RULES.sofa.seats[currentSeats] || PRICING_RULES.sofa.base;
+
+                        // Calculate extras
+                        let currentExtrasTotal = 0;
+                        document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+                            const label = cb.closest('label') || cb.parentElement;
+                            if (!label) return;
+
+                            const container = label.closest('.flex.items-start') ||
+                                            label.closest('[class*="hover:bg-gray"]') ||
+                                            label.parentElement;
+                            const labelText = (container ? container.innerText : label.innerText).toLowerCase();
+
+                            const match = labelText.match(/\+(\d+(?:[.,]\d+)?)\s*€/);
+                            if (match) {
+                                let extraPrice = parseFloat(match[1].replace(',', '.'));
+                                const qtyValueEl = container ? container.querySelector('.sl-extra-qty-value') : null;
+
+                                if (qtyValueEl) {
+                                    const qty = parseInt(qtyValueEl.textContent) || 1;
+                                    currentExtrasTotal += extraPrice * qty;
+                                } else {
+                                    currentExtrasTotal += extraPrice;
+                                }
+                            }
+                        });
+
+                        const totalPrice = currentPrice + currentExtrasTotal;
+
+                        // Store this configuration in a data attribute or global store
+                        console.log(`📦 Adding sofa to quote: ${currentSeats} seats, base: ${currentPrice}€, extras: ${currentExtrasTotal}€, total: ${totalPrice}€`);
+
+                        // Store in session storage to preserve between navigations
+                        const sofaConfig = {
+                            seats: currentSeats,
+                            basePrice: currentPrice,
+                            extrasTotal: currentExtrasTotal,
+                            totalPrice: totalPrice,
+                            timestamp: Date.now()
+                        };
+
+                        // Get existing sofa configs
+                        let sofaConfigs = [];
+                        try {
+                            const stored = sessionStorage.getItem('sl_sofa_configs');
+                            if (stored) sofaConfigs = JSON.parse(stored);
+                        } catch(e) {}
+
+                        // Add new config
+                        sofaConfigs.push(sofaConfig);
+                        sessionStorage.setItem('sl_sofa_configs', JSON.stringify(sofaConfigs));
+
+                        console.log(`📊 Total sofas in quote: ${sofaConfigs.length}`);
+                    }
+                }, true); // Use capture phase to run before React's handler
+            }
+        });
+    }
+
+    // ==========================================
     // 4. ADD QUANTITY CONTROLS TO EXTRAS
     // ==========================================
     function addQuantityToExtras() {
@@ -1263,6 +1360,8 @@
             attachPerSqmListeners();
             updatePriceDisplay();
             interceptOutrosClick();
+            hideAdicionarOutroButton();
+            fixIndependentSofaPricing();
         }
 
         if (window.location.pathname.startsWith('/admin')) {
