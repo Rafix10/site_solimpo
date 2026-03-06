@@ -81,13 +81,13 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         sender: {
-          name: "SofaLimpo Website",
-          email: "noreply@sofalimpo.com", // Alterar para o teu email verificado no Brevo
+          name: "Sofá Limpo",
+          email: "no-reply@sofalimpo.pt",
         },
         to: [
           {
-            email: "seu-email@exemplo.com", // Alterar para o email onde queres receber as mensagens
-            name: "SofaLimpo"
+            email: "geral@sofalimpo.pt",
+            name: "Sofá Limpo"
           }
         ],
         subject: `Nova Mensagem de Contacto - ${formData.name}`,
