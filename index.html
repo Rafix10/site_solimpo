@@ -1327,73 +1327,58 @@
     document.addEventListener('change', () => setTimeout(updatePriceDisplay, 100));
     document.addEventListener('input', () => setTimeout(updatePriceDisplay, 150));
 
-    // Store current calculated price globally for React to access
-    window.__SOFALIMPO_CURRENT_PRICE__ = null;
-
-    // Override Element.prototype methods to inject our price
-    const originalInnerTextGetter = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerText').get;
-    const originalTextContentGetter = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent').get;
-
-    Object.defineProperty(HTMLElement.prototype, 'innerText', {
-        get: function() {
-            const originalValue = originalInnerTextGetter.call(this);
-
-            // If this element has data-price and React is reading it, inject the correct price
-            if (this.hasAttribute && this.hasAttribute('data-price') && originalValue.includes('€')) {
-                const dataPrice = this.getAttribute('data-price');
-                if (dataPrice && window.__SOFALIMPO_READING_PRICE__) {
-                    const formattedPrice = parseFloat(dataPrice).toFixed(2).replace('.', ',');
-                    console.log(`🔧 Intercepted innerText read: returning "${formattedPrice} €" instead of "${originalValue}"`);
-                    return formattedPrice + ' €';
-                }
-            }
-            return originalValue;
-        },
-        configurable: true
-    });
-
-    Object.defineProperty(Node.prototype, 'textContent', {
-        get: function() {
-            const originalValue = originalTextContentGetter.call(this);
-
-            // If this element has data-price and React is reading it, inject the correct price
-            if (this.hasAttribute && this.hasAttribute('data-price') && originalValue.includes('€')) {
-                const dataPrice = this.getAttribute('data-price');
-                if (dataPrice && window.__SOFALIMPO_READING_PRICE__) {
-                    const formattedPrice = parseFloat(dataPrice).toFixed(2).replace('.', ',');
-                    console.log(`🔧 Intercepted textContent read: returning "${formattedPrice} €" instead of "${originalValue}"`);
-                    return formattedPrice + ' €';
-                }
-            }
-            return originalValue;
-        },
-        configurable: true
-    });
-
-    // Intercept clicks on "Adicionar ao Orçamento" button
+    // CRITICAL FIX: Intercept button clicks and force correct price into ALL text elements
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (btn && (btn.textContent.includes('Adicionar') || btn.textContent.includes('Orçamento'))) {
-            console.log('🎯 "Adicionar ao Orçamento" clicked!');
+            console.log('🎯 "Adicionar ao Orçamento" clicked - applying emergency fix!');
 
-            // Enable price interception
-            window.__SOFALIMPO_READING_PRICE__ = true;
-
-            // Find and store the price
-            const formContainer = document.querySelector('form') || document.querySelector('[class*="space-y-6"]');
-            if (formContainer) {
-                const priceEl = formContainer.querySelector('[data-price]');
-                if (priceEl) {
-                    const price = parseFloat(priceEl.getAttribute('data-price'));
-                    console.log(`💰 Stored price for React: ${price}`);
-                    window.__SOFALIMPO_CURRENT_PRICE__ = price;
-                }
-            }
-
-            // Disable after 500ms
+            // Wait a tiny bit for the DOM to settle
             setTimeout(() => {
-                window.__SOFALIMPO_READING_PRICE__ = false;
-            }, 500);
+                const formContainer = document.querySelector('form') || document.querySelector('[class*="space-y-6"]');
+                if (!formContainer) return;
+
+                // Find our calculated price
+                const priceEl = formContainer.querySelector('[data-price]');
+                if (!priceEl) return;
+
+                const correctPrice = priceEl.getAttribute('data-price');
+                if (!correctPrice) return;
+
+                // Format correctly
+                const formattedPrice = parseFloat(correctPrice).toFixed(2).replace('.', ',');
+                const priceText = formattedPrice + ' €';
+
+                console.log(`💰 Forcing price ${priceText} into ALL price displays`);
+
+                // Update EVERY element that might contain the price
+                formContainer.querySelectorAll('*').forEach(el => {
+                    // Only target leaf elements (no children)
+                    if (el.children.length > 0) return;
+
+                    const text = el.innerText || '';
+                    if (!text.includes('€')) return;
+                    if (!/\d/.test(text)) return;
+
+                    // Check if this is a total price display
+                    const isTotalDisplay = el.closest('.bg-gray-50') ||
+                                         el.className.includes('font-bold') ||
+                                         el.className.includes('text-3xl') ||
+                                         el.className.includes('text-2xl');
+
+                    const isOptionLabel = el.closest('label');
+                    const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+
+                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                        console.log(`  ✅ Updated: "${el.innerText}" → "${priceText}"`);
+                        // Force both properties
+                        el.innerText = priceText;
+                        if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+                            el.childNodes[0].nodeValue = priceText;
+                        }
+                    }
+                });
+            }, 5);
         }
     }, true);
 
