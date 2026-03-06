@@ -479,24 +479,29 @@
 
             if (basePrice > 0 && width > 0 && height > 0) {
                 const sqm = width * height;
-                const total = (basePrice * sqm * quantity).toFixed(2).replace('.', ',');
+                const finalPrice = basePrice * sqm * quantity;
+                const total = finalPrice.toFixed(2).replace('.', ',');
 
-                // Update all price displays
-                document.querySelectorAll('*').forEach(el => {
-                    if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
-                        const priceRegex = /\d+([.,]\d{2})?\s*€/;
-                        if (priceRegex.test(el.innerText)) {
-                            const isTotalDisplay = el.closest('.bg-gray-50') ||
-                                                 el.className.includes('font-bold') ||
-                                                 el.className.includes('text-3xl');
-                            const isOptionLabel = el.closest('label');
+                // Update ONLY the form's price display
+                const formContainer = document.querySelector('form') || document.querySelector('[class*="space-y-6"]');
+                if (formContainer) {
+                    formContainer.querySelectorAll('*').forEach(el => {
+                        if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
+                            const priceRegex = /\d+([.,]\d{2})?\s*€/;
+                            if (priceRegex.test(el.innerText)) {
+                                const isTotalDisplay = el.closest('.bg-gray-50') ||
+                                                     el.className.includes('font-bold') ||
+                                                     el.className.includes('text-3xl');
+                                const isOptionLabel = el.closest('label');
 
-                            if (isTotalDisplay && !isOptionLabel) {
-                                el.innerText = el.innerText.replace(priceRegex, total + ' €');
+                                if (isTotalDisplay && !isOptionLabel) {
+                                    el.innerText = el.innerText.replace(priceRegex, total + ' €');
+                                    el.setAttribute('data-price', finalPrice.toFixed(2));
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
             return; // Done with per_sqm service
         }
@@ -536,23 +541,30 @@
         });
 
         if (basePrice > 0) {
-            const total = ((basePrice + extrasTotal) * quantity).toFixed(2).replace('.', ',');
-            document.querySelectorAll('*').forEach(el => {
-                if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
-                    const priceRegex = /\d+([.,]\d{2})?\s*€/;
-                    if (priceRegex.test(el.innerText)) {
-                        const isTotalDisplay = el.closest('.bg-gray-50') ||
-                                             el.className.includes('font-bold') ||
-                                             el.className.includes('text-3xl');
-                        const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
-                        const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+            const finalPrice = (basePrice + extrasTotal) * quantity;
+            const total = finalPrice.toFixed(2).replace('.', ',');
 
-                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
-                            el.innerText = el.innerText.replace(priceRegex, total + ' €');
+            // Update ONLY the form's price display
+            const formContainer = document.querySelector('form') || document.querySelector('[class*="space-y-6"]');
+            if (formContainer) {
+                formContainer.querySelectorAll('*').forEach(el => {
+                    if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
+                        const priceRegex = /\d+([.,]\d{2})?\s*€/;
+                        if (priceRegex.test(el.innerText)) {
+                            const isTotalDisplay = el.closest('.bg-gray-50') ||
+                                                 el.className.includes('font-bold') ||
+                                                 el.className.includes('text-3xl');
+                            const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
+                            const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+
+                            if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                                el.innerText = el.innerText.replace(priceRegex, total + ' €');
+                                el.setAttribute('data-price', finalPrice.toFixed(2));
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
         }
     }
 
@@ -644,6 +656,8 @@
                         if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
                             const oldPrice = el.innerText;
                             el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
+                            // Store the numeric price value for React to read
+                            el.setAttribute('data-price', finalPrice.toFixed(2));
                             updatedCount++;
                             priceElements.push({
                                 element: el.tagName,
@@ -690,6 +704,8 @@
                                 if (currentPrice && currentPrice[0] !== formattedPrice + ' €') {
                                     console.log(`🔄 Force updating in form: "${el.innerText}" -> "${formattedPrice} €"`);
                                     el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
+                                    // Store the numeric price value for React to read
+                                    el.setAttribute('data-price', finalPrice.toFixed(2));
                                 }
                             }
                         }
