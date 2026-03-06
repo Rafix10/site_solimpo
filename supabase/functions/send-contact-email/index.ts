@@ -14,6 +14,7 @@ interface ContactFormData {
 }
 
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -22,8 +23,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Parse request body
     const formData: ContactFormData = await req.json();
 
+    // Validate required fields
     if (!formData.name || !formData.email || !formData.message) {
       return new Response(
         JSON.stringify({
@@ -39,13 +42,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpPort = Deno.env.get("SMTP_PORT");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASS");
+    // Get Brevo API key from environment
+    const brevoApiKey = Deno.env.get("BREVO_API_KEY");
 
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
-      console.error("SMTP credentials not configured");
+    if (!brevoApiKey) {
+      console.error("BREVO_API_KEY not configured");
       return new Response(
         JSON.stringify({
           error: "Serviço de email não configurado"
@@ -60,6 +61,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Prepare email content
     const emailContent = `
       <h2>Nova Mensagem de Contacto - SofaLimpo</h2>
       <p><strong>Nome:</strong> ${formData.name}</p>
@@ -69,61 +71,58 @@ Deno.serve(async (req: Request) => {
       <p>${formData.message.replace(/\n/g, '<br>')}</p>
     `;
 
-    const boundary = "----WebKitFormBoundary" + Math.random().toString(36);
-
-    const emailBody = [
-      `From: Sofá Limpo <${smtpUser}>`,
-      `To: inete210061@gmail.com`,
-      `Subject: Nova Mensagem de Contacto - ${formData.name}`,
-      `Reply-To: ${formData.name} <${formData.email}>`,
-      `MIME-Version: 1.0`,
-      `Content-Type: multipart/alternative; boundary="${boundary}"`,
-      ``,
-      `--${boundary}`,
-      `Content-Type: text/html; charset=UTF-8`,
-      `Content-Transfer-Encoding: 7bit`,
-      ``,
-      emailContent,
-      `--${boundary}--`,
-    ].join("\r\n");
-
-    const conn = await Deno.connect({
-      hostname: smtpHost,
-      port: parseInt(smtpPort),
+    // Send email via Brevo API
+    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": brevoApiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: {
+          name: "Sofá Limpo",
+          email: "no-reply@sofalimpo.pt",
+        },
+        to: [
+          {
+            email: "inete210061@gmail.com",
+            name: "Sofá Limpo"
+          }
+        ],
+        subject: `Nova Mensagem de Contacto - ${formData.name}`,
+        htmlContent: emailContent,
+        replyTo: {
+          email: formData.email,
+          name: formData.name
+        }
+      }),
     });
 
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-
-    async function readResponse(): Promise<string> {
-      const buffer = new Uint8Array(1024);
-      const n = await conn.read(buffer);
-      return decoder.decode(buffer.subarray(0, n || 0));
+    if (!brevoResponse.ok) {
+      const errorData = await brevoResponse.text();
+      console.error("Brevo API error:", errorData);
+      return new Response(
+        JSON.stringify({
+          error: "Erro ao enviar email"
+        }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
-    async function sendCommand(command: string): Promise<string> {
-      await conn.write(encoder.encode(command + "\r\n"));
-      return await readResponse();
-    }
-
-    await readResponse();
-    await sendCommand(`EHLO sofalimpo.pt`);
-    await sendCommand(`AUTH LOGIN`);
-    await sendCommand(btoa(smtpUser));
-    await sendCommand(btoa(smtpPass));
-    await sendCommand(`MAIL FROM:<${smtpUser}>`);
-    await sendCommand(`RCPT TO:<inete210061@gmail.com>`);
-    await sendCommand(`DATA`);
-    await conn.write(encoder.encode(emailBody + "\r\n.\r\n"));
-    await readResponse();
-    await sendCommand(`QUIT`);
-
-    conn.close();
+    const result = await brevoResponse.json();
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Email enviado com sucesso!"
+        message: "Email enviado com sucesso!",
+        messageId: result.messageId
       }),
       {
         status: 200,
@@ -138,7 +137,7 @@ Deno.serve(async (req: Request) => {
     console.error("Error processing contact form:", error);
     return new Response(
       JSON.stringify({
-        error: "Erro ao enviar email"
+        error: "Erro ao processar o formulário"
       }),
       {
         status: 500,
