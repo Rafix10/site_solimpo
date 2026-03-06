@@ -852,14 +852,14 @@
             navbar.style.width = '100%';
             navbar.style.backgroundColor = 'white';
             navbar.style.borderBottom = '1px solid #e5e7eb';
-            navbar.style.padding = '16px 32px';
+            navbar.style.padding = '12px 32px';
             navbar.style.boxSizing = 'border-box';
             navbar.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
 
             navbar.innerHTML = `
                 <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
-                    <a href="/" style="font-size: 1.5rem; font-weight: 700; color: #1a1a2e; text-decoration: none;">
-                        SofáLimpo
+                    <a href="/" style="display: flex; align-items: center; gap: 8px; text-decoration: none; transition: opacity 0.2s;">
+                        <img src="/public/logo.png" alt="SofáLimpo" style="height: 50px; width: auto;">
                     </a>
                     <div style="display: flex; gap: 32px; align-items: center;">
                         <a href="/" style="color: #6b7280; text-decoration: none; font-weight: 500; transition: color 0.2s;">Início</a>
@@ -874,7 +874,7 @@
             document.body.insertBefore(navbar, document.body.firstChild);
 
             // Add padding to body to account for fixed navbar
-            document.body.style.paddingTop = '60px';
+            document.body.style.paddingTop = '74px';
         }
     };
 
