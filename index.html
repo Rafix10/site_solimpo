@@ -490,35 +490,21 @@
         );
         if (hasLarguraLabel) return;
 
-        // Find extras header (either "Extras Disponíveis" or "Tipo de serviço" for tapetes)
-        let extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
-        let isServiceType = false;
-
-        if (!extrasHeader) {
-            // Check for "Tipo de serviço" (only for tapetes)
-            const serviceTypeHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Tipo de serviço'));
-            if (serviceTypeHeader) {
-                const serviceTypeContainer = serviceTypeHeader.parentElement;
-                if (serviceTypeContainer) {
-                    const firstCheckbox = serviceTypeContainer.querySelector('input[type="checkbox"]');
-                    if (firstCheckbox) {
-                        const label = firstCheckbox.closest('label');
-                        if (label) {
-                            const labelText = label.innerText.toLowerCase();
-                            if (labelText.includes('higienização') || labelText.includes('lavanderia') || labelText.includes('local')) {
-                                extrasHeader = serviceTypeHeader;
-                                isServiceType = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
+        // Find extras header
+        const extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
         if (!extrasHeader) return;
 
         const extrasContainer = extrasHeader.parentElement;
         if (!extrasContainer) return;
+
+        // Check if this container has carpet hygiene services (indicating it's tapetes)
+        const extraLabels = Array.from(extrasContainer.querySelectorAll('label'));
+        const isCarpetService = extraLabels.some(label =>
+            label.innerText.includes('Higienização')
+        );
+
+        // Don't add quantity controls to carpet service types
+        if (isCarpetService) return;
 
         const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
 
@@ -533,12 +519,10 @@
 
             const extraName = nameEl.textContent.trim().toLowerCase();
 
-            // Only add quantity controls for non-service-type extras
-            const needsQty = !isServiceType && (
-                extraName.includes('almofada') ||
-                extraName.includes('puff') ||
-                extraName.includes('banco')
-            );
+            // Add quantity controls only for almofadas, puffs, bancos (not for service types)
+            const needsQty = extraName.includes('almofada') ||
+                              extraName.includes('puff') ||
+                              extraName.includes('banco');
 
             if (needsQty) {
                 const extraKey = extraName.replace(/\s+/g, '_');
@@ -606,16 +590,23 @@
         );
         if (hasLarguraLabel) return;
 
-        // Check if this is a tapetes service
-        const serviceTitle = Array.from(document.querySelectorAll('*')).find(el =>
-            el.innerText && el.innerText.includes('Tapetes')
+        // Find all h4 headers
+        const allHeaders = Array.from(document.querySelectorAll('h4'));
+        const extrasHeader = allHeaders.find(h => h.innerText.includes('Extras Disponíveis'));
+
+        if (!extrasHeader) return;
+
+        // Check if any of the extras contain "Higienização" (indicating it's tapetes service type)
+        const extrasContainer = extrasHeader.parentElement;
+        if (!extrasContainer) return;
+
+        const extraLabels = Array.from(extrasContainer.querySelectorAll('label'));
+        const hasCarpetHygiene = extraLabels.some(label =>
+            label.innerText.includes('Higienização')
         );
 
-        if (!serviceTitle) return;
-
-        // Find and rename "Extras Disponíveis" to "Tipo de serviço" for tapetes
-        const extrasHeader = Array.from(document.querySelectorAll('h4')).find(h => h.innerText.includes('Extras Disponíveis'));
-        if (extrasHeader) {
+        // Only rename if it's tapetes service (has Higienização extras)
+        if (hasCarpetHygiene) {
             extrasHeader.textContent = 'Tipo de serviço';
         }
     }
