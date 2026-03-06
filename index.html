@@ -625,6 +625,8 @@
 
         // Update all total price displays (but not option labels or extra controls)
         let updatedCount = 0;
+        const priceElements = [];
+
         document.querySelectorAll('*').forEach(el => {
             if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
                 const priceRegex = /\d+([.,]\d{2})?\s*€/;
@@ -636,14 +638,59 @@
                     const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
 
                     if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                        const oldPrice = el.innerText;
                         el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
                         updatedCount++;
+                        priceElements.push({
+                            element: el.tagName,
+                            classes: el.className,
+                            oldPrice: oldPrice,
+                            newPrice: el.innerText
+                        });
                     }
                 }
             }
         });
 
         console.log(`✅ Updated ${updatedCount} price displays`);
+        if (priceElements.length > 0) {
+            console.log('📍 Updated elements:', priceElements);
+        }
+
+        // FORCE UPDATE: Also update ALL elements with prices that might be in summary/resume
+        // This catches elements that don't have the specific classes but should still be updated
+        setTimeout(() => {
+            document.querySelectorAll('*').forEach(el => {
+                if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
+                    const priceRegex = /\d+([.,]\d{2})?\s*€/;
+                    if (priceRegex.test(el.innerText)) {
+                        // Skip only option labels and extra controls
+                        const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
+                        const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+                        const isSeatLabel = el.closest('label')?.textContent?.includes('Lugar');
+
+                        // Check if this might be a summary/total element
+                        const parent = el.parentElement;
+                        const isPossibleTotal = parent && (
+                            parent.className.includes('bg-') ||
+                            parent.className.includes('border') ||
+                            parent.className.includes('rounded') ||
+                            parent.className.includes('shadow') ||
+                            el.className.includes('text-') ||
+                            el.innerText.trim().endsWith('€')
+                        );
+
+                        if (!isOptionLabel && !isExtraPrice && !isSeatLabel && isPossibleTotal) {
+                            const currentPrice = el.innerText.match(priceRegex);
+                            if (currentPrice && currentPrice[0] !== formattedPrice + ' €') {
+                                console.log(`🔄 Force updating: "${el.innerText}" -> "${formattedPrice} €"`);
+                                el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
+                            }
+                        }
+                    }
+                }
+            });
+        }, 100);
     }
 
     // ==========================================
@@ -1252,7 +1299,19 @@
     // Fallback interval (slower, for edge cases)
     setInterval(applyAllCustomizations, 2000);
 
+    // Listen for all changes that might trigger price updates
     document.addEventListener('click', () => setTimeout(updatePriceDisplay, 100));
+    document.addEventListener('change', () => setTimeout(updatePriceDisplay, 100));
+    document.addEventListener('input', () => setTimeout(updatePriceDisplay, 150));
+
+    // Additional aggressive update for sofa prices
+    setInterval(() => {
+        const seatsControl = document.getElementById('custom-seats-value');
+        if (seatsControl) {
+            // This is a sofa - ensure price is always up to date
+            updatePriceDisplay();
+        }
+    }, 500);
 })();
 </script>
 
