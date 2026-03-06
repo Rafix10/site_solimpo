@@ -1102,6 +1102,70 @@
     }
 
     // ==========================================
+    // INTERCEPT QUOTE ITEMS TO FIX PRICING
+    // ==========================================
+    function interceptQuoteItems() {
+        // Watch for changes in the quote summary
+        const quoteSummary = document.body;
+
+        const quoteObserver = new MutationObserver((mutations) => {
+            // Find all quote items
+            const items = document.querySelectorAll('[class*="border"]');
+            items.forEach(item => {
+                const text = item.innerText;
+
+                // Check if it's a sofa item with €0,00
+                if (text.includes('Sofá') && text.includes('€0,00')) {
+                    console.log('🔧 Found sofa item with €0,00, fixing...', text.substring(0, 100));
+
+                    // Extract number of seats from the item details
+                    const seatsMatch = text.match(/(\d+)\s+lugares?/i);
+                    if (seatsMatch) {
+                        const seats = parseInt(seatsMatch[1]);
+                        const correctPrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
+
+                        console.log('💺 Sofa with', seats, 'seats should be:', correctPrice);
+
+                        // Get quantity
+                        const qtyMatch = text.match(/Quantidade:\s*(\d+)/i);
+                        const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+
+                        // Calculate total with extras
+                        let total = correctPrice * qty;
+
+                        // Check for extras in the text
+                        if (text.includes('Impermeabilização')) total += PRICING_RULES.sofa.extras.impermeabilizacao * qty;
+                        if (text.includes('Gorduras/Óleos')) total += PRICING_RULES.sofa.extras.gorduras * qty;
+                        if (text.includes('Manchas de Sangue')) total += PRICING_RULES.sofa.extras.sangue * qty;
+                        if (text.includes('Limpeza de Chaise')) total += PRICING_RULES.sofa.extras.chaise * qty;
+
+                        const formattedPrice = `€${total.toFixed(2).replace('.', ',')}`;
+                        console.log('💰 Updating price to:', formattedPrice);
+
+                        // Find all text nodes containing €0,00 and replace them
+                        const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT, null, false);
+                        let node;
+                        while (node = walker.nextNode()) {
+                            if (node.textContent.includes('€0,00')) {
+                                node.textContent = node.textContent.replace('€0,00', formattedPrice);
+                                console.log('✅ Price updated in quote!');
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        quoteObserver.observe(quoteSummary, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+
+        console.log('👀 Quote observer installed');
+    }
+
+    // ==========================================
     // APPLY ALL CUSTOMIZATIONS
     // ==========================================
     function applyAllCustomizations() {
@@ -1122,6 +1186,7 @@
             updatePriceDisplay();
             interceptOutrosClick();
             interceptSubmitButton();
+            interceptQuoteItems();
         }
 
         if (window.location.pathname.startsWith('/admin')) {
