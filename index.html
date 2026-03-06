@@ -1024,6 +1024,104 @@
     }
 
     // ==========================================
+    // INTERCEPT LOCALSTORAGE TO FIX SOFA PRICING
+    // ==========================================
+    function interceptLocalStorage() {
+        const originalSetItem = localStorage.setItem.bind(localStorage);
+
+        localStorage.setItem = function(key, value) {
+            // Intercept quote items being saved
+            if (key.includes('quote') || key.includes('orcamento') || key.includes('items')) {
+                try {
+                    const data = JSON.parse(value);
+
+                    // If it's an array of items
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            if (item && item.service && item.service.toLowerCase().includes('sofá')) {
+                                // Extract seats from specifications
+                                const specs = item.specifications || {};
+                                const seatsMatch = JSON.stringify(specs).match(/(\d+)\s+lugares?/i);
+
+                                if (seatsMatch) {
+                                    const seats = parseInt(seatsMatch[1]);
+                                    const correctPrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
+
+                                    if (item.basePrice !== correctPrice) {
+                                        console.log('🔧 Fixing sofa price in localStorage:');
+                                        console.log('   Seats:', seats);
+                                        console.log('   Old price:', item.basePrice);
+                                        console.log('   New price:', correctPrice);
+                                        item.basePrice = correctPrice;
+
+                                        // Recalculate total
+                                        let total = correctPrice * (item.quantity || 1);
+
+                                        // Add extras
+                                        if (specs.extras) {
+                                            specs.extras.forEach(extra => {
+                                                if (extra.includes('Impermeabilização')) total += PRICING_RULES.sofa.extras.impermeabilizacao;
+                                                if (extra.includes('Gorduras')) total += PRICING_RULES.sofa.extras.gorduras;
+                                                if (extra.includes('Sangue')) total += PRICING_RULES.sofa.extras.sangue;
+                                                if (extra.includes('Chaise')) total += PRICING_RULES.sofa.extras.chaise;
+                                            });
+                                        }
+
+                                        item.totalPrice = total;
+                                        console.log('   Total with extras:', total);
+                                    }
+                                }
+                            }
+                        });
+                        value = JSON.stringify(data);
+                    }
+                    // If it's a single item
+                    else if (data && data.service && data.service.toLowerCase().includes('sofá')) {
+                        const specs = data.specifications || {};
+                        const seatsMatch = JSON.stringify(specs).match(/(\d+)\s+lugares?/i);
+
+                        if (seatsMatch) {
+                            const seats = parseInt(seatsMatch[1]);
+                            const correctPrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
+
+                            if (data.basePrice !== correctPrice) {
+                                console.log('🔧 Fixing single sofa price in localStorage:');
+                                console.log('   Seats:', seats);
+                                console.log('   Old price:', data.basePrice);
+                                console.log('   New price:', correctPrice);
+                                data.basePrice = correctPrice;
+
+                                // Recalculate total
+                                let total = correctPrice * (data.quantity || 1);
+
+                                // Add extras
+                                if (specs.extras) {
+                                    specs.extras.forEach(extra => {
+                                        if (extra.includes('Impermeabilização')) total += PRICING_RULES.sofa.extras.impermeabilizacao;
+                                        if (extra.includes('Gorduras')) total += PRICING_RULES.sofa.extras.gorduras;
+                                        if (extra.includes('Sangue')) total += PRICING_RULES.sofa.extras.sangue;
+                                        if (extra.includes('Chaise')) total += PRICING_RULES.sofa.extras.chaise;
+                                    });
+                                }
+
+                                data.totalPrice = total;
+                                console.log('   Total with extras:', total);
+                            }
+                        }
+                        value = JSON.stringify(data);
+                    }
+                } catch(e) {
+                    // Not JSON, ignore
+                }
+            }
+
+            return originalSetItem(key, value);
+        };
+
+        console.log('📦 localStorage interceptor installed');
+    }
+
+    // ==========================================
     // INTERCEPT SUBMIT TO UPDATE PRICING DATA
     // ==========================================
     function interceptSubmitButton() {
@@ -1059,7 +1157,7 @@
                 const inputEvent = new Event('input', { bubbles: true });
                 basePriceInput.dispatchEvent(inputEvent);
 
-                console.log('Injected base price:', basePrice, 'for seats:', seats);
+                console.log('💉 Injected base price:', basePrice, 'for seats:', seats);
             }
         }, false);
 
@@ -1079,7 +1177,7 @@
                     const seats = parseInt(seatsSpan.innerText);
                     const basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
 
-                    console.log('Button clicked - Seats:', seats, 'Base Price:', basePrice);
+                    console.log('🖱️ Button clicked - Seats:', seats, 'Base Price:', basePrice);
 
                     // Try to find and update React's internal price state
                     // Look for any input that might hold the base price
@@ -1087,13 +1185,13 @@
                     allInputs.forEach(inp => {
                         const val = parseFloat(inp.value);
                         // If we find an input with a value close to old pricing, update it
-                        if (val === 71 || val === 81 || val === 91 || val === 99 || val === 109) {
-                            console.log('Found potential price input:', inp.name, 'old value:', inp.value);
+                        if (val === 71 || val === 81 || val === 91 || val === 99 || val === 109 || val === 0) {
+                            console.log('🔍 Found potential price input:', inp.name, 'old value:', inp.value);
                             const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
                             nativeInputValueSetter.call(inp, basePrice);
                             const inputEvent = new Event('input', { bubbles: true });
                             inp.dispatchEvent(inputEvent);
-                            console.log('Updated to:', basePrice);
+                            console.log('✅ Updated to:', basePrice);
                         }
                     });
                 }
@@ -1201,6 +1299,11 @@
             formContainer.dataset.slInitialized = 'true';
         }
     }
+
+    // ==========================================
+    // INITIALIZE EARLY INTERCEPTORS
+    // ==========================================
+    interceptLocalStorage();
 
     // ==========================================
     // MUTATION OBSERVER (faster, no flashing)
