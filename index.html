@@ -277,6 +277,17 @@
       .sl-hide-element {
         display: none !important;
       }
+
+      /* Prevent flash during transformation */
+      .sl-transforming {
+        opacity: 0 !important;
+        pointer-events: none;
+      }
+
+      .sl-transform-ready {
+        opacity: 1 !important;
+        transition: opacity 0.15s ease-in;
+      }
     </style>
     <script type="module" crossorigin src="/assets/index-DDZKCkf0.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BRgxaNTN.css">
@@ -670,10 +681,12 @@
             l.textContent.includes('Altura')
         );
         specLabels.forEach(label => {
-            label.classList.add('sl-spec-label');
-            label.style.fontWeight = '600';
-            label.style.fontSize = '1.125rem';
-            label.style.marginBottom = '1rem';
+            if (!label.classList.contains('sl-spec-label')) {
+                label.classList.add('sl-spec-label');
+                label.style.fontWeight = '600';
+                label.style.fontSize = '1.125rem';
+                label.style.marginBottom = '1rem';
+            }
         });
 
         // Skip remaining reorganization if this is a tapete service
@@ -688,13 +701,18 @@
         // Hide all "Especificações" headers
         const specsHeaders = allHeaders.filter(h => h.innerText.includes('Especificações'));
         specsHeaders.forEach((header) => {
-            header.classList.add('sl-hide-element');
+            if (!header.classList.contains('sl-hide-element')) {
+                header.classList.add('sl-hide-element');
+            }
         });
 
         // Find and rename "Extras Disponíveis" to "Especificações"
         const extrasHeaders = allHeaders.filter(h => h.innerText.includes('Extras Disponíveis'));
         extrasHeaders.forEach(extrasHeader => {
-            extrasHeader.textContent = 'Especificações';
+            if (extrasHeader.textContent !== 'Especificações' && !extrasHeader.dataset.slRenamed) {
+                extrasHeader.textContent = 'Especificações';
+                extrasHeader.dataset.slRenamed = 'true';
+            }
         });
     }
 
@@ -959,9 +977,15 @@
     }
 
     // ==========================================
-    // MAIN LOOP
+    // APPLY ALL CUSTOMIZATIONS
     // ==========================================
-    setInterval(() => {
+    function applyAllCustomizations() {
+        // Mark elements being transformed to prevent flash
+        const formContainer = document.querySelector('[class*="space-y-6"]') || document.querySelector('form');
+        if (formContainer && !formContainer.dataset.slInitialized) {
+            formContainer.classList.add('sl-transforming');
+        }
+
         removeOldSofaCama();
 
         if (!window.location.pathname.startsWith('/admin')) {
@@ -978,7 +1002,35 @@
             injectAdminSeatsPricingEditor();
             injectAdminExtrasConfig();
         }
-    }, 500);
+
+        // Mark as ready after transformation
+        if (formContainer && !formContainer.dataset.slInitialized) {
+            formContainer.classList.remove('sl-transforming');
+            formContainer.classList.add('sl-transform-ready');
+            formContainer.dataset.slInitialized = 'true';
+        }
+    }
+
+    // ==========================================
+    // MUTATION OBSERVER (faster, no flashing)
+    // ==========================================
+    const observer = new MutationObserver((mutations) => {
+        // Debounce: only run once per batch of mutations
+        clearTimeout(window.slCustomizationTimeout);
+        window.slCustomizationTimeout = setTimeout(applyAllCustomizations, 50);
+    });
+
+    // Start observing
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Initial run
+    applyAllCustomizations();
+
+    // Fallback interval (slower, for edge cases)
+    setInterval(applyAllCustomizations, 2000);
 
     document.addEventListener('click', () => setTimeout(updatePriceDisplay, 100));
 })();
