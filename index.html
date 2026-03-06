@@ -1028,10 +1028,61 @@
     // ==========================================
     function interceptLocalStorage() {
         const originalSetItem = localStorage.setItem.bind(localStorage);
+        const originalGetItem = localStorage.getItem.bind(localStorage);
 
+        // Helper function to fix sofa prices
+        const fixSofaPrices = (data) => {
+            let modified = false;
+
+            const fixItem = (item) => {
+                if (!item || !item.service) return;
+
+                if (item.service.toLowerCase().includes('sofá')) {
+                    const specs = item.specifications || {};
+                    const seatsMatch = JSON.stringify(specs).match(/(\d+)\s+lugares?/i);
+
+                    if (seatsMatch) {
+                        const seats = parseInt(seatsMatch[1]);
+                        const correctPrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
+
+                        // Fix if price is 0 or incorrect
+                        if (item.basePrice === 0 || item.basePrice === null || item.basePrice === undefined || item.basePrice !== correctPrice) {
+                            console.log('🔧 Fixing sofa price:', item.basePrice, '→', correctPrice, '(', seats, 'places)');
+                            item.basePrice = correctPrice;
+
+                            // Recalculate total
+                            let total = correctPrice * (item.quantity || 1);
+
+                            if (specs.extras) {
+                                specs.extras.forEach(extra => {
+                                    if (extra.includes('Impermeabilização')) total += PRICING_RULES.sofa.extras.impermeabilizacao;
+                                    if (extra.includes('Gorduras')) total += PRICING_RULES.sofa.extras.gorduras;
+                                    if (extra.includes('Sangue')) total += PRICING_RULES.sofa.extras.sangue;
+                                    if (extra.includes('Chaise')) total += PRICING_RULES.sofa.extras.chaise;
+                                });
+                            }
+
+                            item.totalPrice = total;
+                            console.log('✅ New total:', total);
+                            modified = true;
+                        }
+                    }
+                }
+            };
+
+            if (Array.isArray(data)) {
+                data.forEach(fixItem);
+            } else if (data && typeof data === 'object') {
+                fixItem(data);
+            }
+
+            return modified;
+        };
+
+        // INTERCEPT WRITE
         localStorage.setItem = function(key, value) {
-            // Intercept quote items being saved
-            if (key.includes('quote') || key.includes('orcamento') || key.includes('items')) {
+            // Check ALL keys, not just specific ones
+            try {
                 try {
                     const data = JSON.parse(value);
 
@@ -1118,7 +1169,28 @@
             return originalSetItem(key, value);
         };
 
-        console.log('📦 localStorage interceptor installed');
+        // INTERCEPT READ - CRITICAL!
+        localStorage.getItem = function(key) {
+            const value = originalGetItem(key);
+            if (!value) return value;
+
+            try {
+                const data = JSON.parse(value);
+                if (fixSofaPrices(data)) {
+                    const fixedValue = JSON.stringify(data);
+                    // Write back the fixed value
+                    originalSetItem(key, fixedValue);
+                    console.log('🔍 READ FIX: Corrected prices in', key);
+                    return fixedValue;
+                }
+            } catch (e) {
+                // Not JSON, return original
+            }
+
+            return value;
+        };
+
+        console.log('📦 localStorage interceptor (READ+WRITE) installed');
     }
 
     // ==========================================
