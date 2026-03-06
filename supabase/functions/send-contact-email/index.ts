@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
         },
         to: [
           {
-            email: "geral@sofalimpo.pt",
+            email: "inete210061@gmail.com",
             name: "Sofá Limpo"
           }
         ],
