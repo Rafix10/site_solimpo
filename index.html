@@ -357,32 +357,70 @@
     // ==========================================
     let PRICING_RULES = {
         'sofa': {
-            'base': 71.00,
-            'seats': { '1': 71.00, '2': 71.00, '3': 81.00, '4': 91.00, '5': 99.00, '6': 109.00 }
+            'base': 51.00,
+            'seats': { '1': 51.00, '2': 71.00, '3': 81.00, '4': 91.00, '5': 99.00, '6': 109.00 }
         },
         'colchao': { 'solteiro': 50.00, 'casal': 74.00 }
     };
 
-    // Load latest pricing from Supabase
+    // Load latest pricing from Supabase - try both sources
     async function loadPricingFromSupabase() {
         try {
-            const resp = await fetch(`${SUPABASE_URL}/rest/v1/prices?select=sofa_1_seat,sofa_2_seats,sofa_3_seats,sofa_4_seats,sofa_5_seats,sofa_6_seats`, {
+            // First, try to load from services.pricing_rules (primary source)
+            const servicesResp = await fetch(`${SUPABASE_URL}/rest/v1/services?type=eq.sofa&select=pricing_rules`, {
                 headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
             });
-            const data = await resp.json();
-            if (data.length > 0) {
+            const services = await servicesResp.json();
+
+            if (services.length > 0 && services[0].pricing_rules?.prices_by_seats) {
+                const seats = services[0].pricing_rules.prices_by_seats;
                 PRICING_RULES.sofa.seats = {
-                    '1': data[0].sofa_1_seat || 71,
-                    '2': data[0].sofa_2_seats || 71,
-                    '3': data[0].sofa_3_seats || 81,
-                    '4': data[0].sofa_4_seats || 91,
-                    '5': data[0].sofa_5_seats || 99,
-                    '6': data[0].sofa_6_seats || 109
+                    '1': parseFloat(seats['1']) || 51,
+                    '2': parseFloat(seats['2']) || 71,
+                    '3': parseFloat(seats['3']) || 81,
+                    '4': parseFloat(seats['4']) || 91,
+                    '5': parseFloat(seats['5']) || 99,
+                    '6': parseFloat(seats['6']) || 109
                 };
-                console.log("Pricing loaded from Supabase:", PRICING_RULES.sofa.seats);
+                PRICING_RULES.sofa.base = PRICING_RULES.sofa.seats['1'];
+                console.log("✅ Pricing loaded from services.pricing_rules:", PRICING_RULES.sofa.seats);
+                console.log("✅ Base price set to:", PRICING_RULES.sofa.base);
+
+                // Verify all prices
+                console.log("📊 VERIFICATION - All seat prices:");
+                for (let i = 1; i <= 6; i++) {
+                    console.log(`   ${i} lugar(es): ${PRICING_RULES.sofa.seats[i]}€`);
+                }
+                return;
+            }
+
+            // Fallback: try prices table
+            const pricesResp = await fetch(`${SUPABASE_URL}/rest/v1/prices?select=sofa_1_seat,sofa_2_seats,sofa_3_seats,sofa_4_seats,sofa_5_seats,sofa_6_seats`, {
+                headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
+            });
+            const prices = await pricesResp.json();
+
+            if (prices.length > 0) {
+                PRICING_RULES.sofa.seats = {
+                    '1': parseFloat(prices[0].sofa_1_seat) || 51,
+                    '2': parseFloat(prices[0].sofa_2_seats) || 71,
+                    '3': parseFloat(prices[0].sofa_3_seats) || 81,
+                    '4': parseFloat(prices[0].sofa_4_seats) || 91,
+                    '5': parseFloat(prices[0].sofa_5_seats) || 99,
+                    '6': parseFloat(prices[0].sofa_6_seats) || 109
+                };
+                PRICING_RULES.sofa.base = PRICING_RULES.sofa.seats['1'];
+                console.log("✅ Pricing loaded from prices table:", PRICING_RULES.sofa.seats);
+                console.log("✅ Base price set to:", PRICING_RULES.sofa.base);
+
+                // Verify all prices
+                console.log("📊 VERIFICATION - All seat prices:");
+                for (let i = 1; i <= 6; i++) {
+                    console.log(`   ${i} lugar(es): ${PRICING_RULES.sofa.seats[i]}€`);
+                }
             }
         } catch(e) {
-            console.log("Using default pricing rules");
+            console.warn("⚠️ Using default pricing rules:", e);
         }
     }
     loadPricingFromSupabase();
@@ -523,20 +561,23 @@
     // ==========================================
     function updateSofaPrice() {
         console.log("🛋️ Calculating SOFA price...");
+        console.log("📋 Available pricing rules:", PRICING_RULES.sofa.seats);
 
         // Get seats value
         const seatsSpan = document.getElementById('custom-seats-value');
         if (!seatsSpan) {
-            console.warn("Seats span not found");
+            console.warn("⚠️ Seats span not found");
             return;
         }
 
         const seats = seatsSpan.innerText.trim();
-        console.log(`Seats: ${seats}`);
+        console.log(`👥 Seats selected: ${seats} (type: ${typeof seats})`);
 
         // Get base price for this number of seats
         let basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
-        console.log(`Base price for ${seats} seats: ${basePrice}`);
+        console.log(`💰 Base price for ${seats} seats: ${basePrice}€`);
+        console.log(`   - PRICING_RULES.sofa.seats['${seats}'] = ${PRICING_RULES.sofa.seats[seats]}`);
+        console.log(`   - PRICING_RULES.sofa.base = ${PRICING_RULES.sofa.base}`);
 
         // Ensure we always have a valid base price
         if (!basePrice || basePrice <= 0) {
@@ -664,6 +705,7 @@
         };
 
         function updateSeats(val) {
+            console.log(`🔧 Updating seats to: ${val}`);
             document.getElementById('custom-seats-value').innerText = val;
             const radio = hiddenContainer.querySelector(`input[value="${val}"]`);
             if (radio) {
@@ -671,6 +713,8 @@
                 radio.dispatchEvent(new Event('change', { bubbles: true }));
                 radio.click();
             }
+            console.log(`📊 Current PRICING_RULES.sofa.seats:`, PRICING_RULES.sofa.seats);
+            console.log(`💰 Price for ${val} seats should be: ${PRICING_RULES.sofa.seats[val]}€`);
             updatePriceDisplay();
         }
     }
