@@ -79,7 +79,6 @@
         transition: background 0.2s;
         font-weight: 500;
         color: #1a1a2e;
-        z-index: 10;
       }
       .sl-contact-card .sl-back-btn:hover { background: #e5e7eb; }
       .sl-contact-card .sl-icon-circle {
@@ -470,7 +469,6 @@
         if (seatsSpan) {
             const seats = seatsSpan.innerText;
             basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
-            console.log('Sofa seats:', seats, 'base price:', basePrice, 'rules:', PRICING_RULES.sofa.seats);
         }
 
         document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
@@ -1024,29 +1022,6 @@
     }
 
     // ==========================================
-    // INTERCEPT SUBMIT BUTTON TO FIX PRICING
-    // ==========================================
-    function interceptSubmitButton() {
-        const buttons = Array.from(document.querySelectorAll('button'));
-        const submitBtn = buttons.find(btn =>
-            btn.innerText.includes('Adicionar ao Orçamento') ||
-            btn.innerText.includes('Orçamento')
-        );
-
-        if (!submitBtn || submitBtn.dataset.slIntercepted) return;
-
-        submitBtn.dataset.slIntercepted = 'true';
-
-        // Add click listener before React's handler
-        submitBtn.addEventListener('click', function(e) {
-            // Force price recalculation right before submission
-            setTimeout(() => {
-                updatePriceDisplay();
-            }, 0);
-        }, true);
-    }
-
-    // ==========================================
     // APPLY ALL CUSTOMIZATIONS
     // ==========================================
     function applyAllCustomizations() {
@@ -1066,7 +1041,6 @@
             attachPerSqmListeners();
             updatePriceDisplay();
             interceptOutrosClick();
-            interceptSubmitButton();
         }
 
         if (window.location.pathname.startsWith('/admin')) {
