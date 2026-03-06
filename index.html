@@ -623,73 +623,79 @@
         const formattedPrice = finalPrice.toFixed(2).replace('.', ',');
         console.log(`Final price: ${basePrice} + ${extrasTotal} x ${quantity} = ${formattedPrice} €`);
 
-        // Update all total price displays (but not option labels or extra controls)
+        // Update ONLY the form's price display, NOT cart/resume items
         let updatedCount = 0;
         const priceElements = [];
 
-        document.querySelectorAll('*').forEach(el => {
-            if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
-                const priceRegex = /\d+([.,]\d{2})?\s*€/;
-                if (priceRegex.test(el.innerText)) {
-                    const isTotalDisplay = el.closest('.bg-gray-50') ||
-                                         el.className.includes('font-bold') ||
-                                         el.className.includes('text-3xl');
-                    const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
-                    const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+        // Find the main form container (the one with the service being configured)
+        const formContainer = document.querySelector('form') || document.querySelector('[class*="space-y-6"]');
 
-                    if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
-                        const oldPrice = el.innerText;
-                        el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
-                        updatedCount++;
-                        priceElements.push({
-                            element: el.tagName,
-                            classes: el.className,
-                            oldPrice: oldPrice,
-                            newPrice: el.innerText
-                        });
-                    }
-                }
-            }
-        });
-
-        console.log(`✅ Updated ${updatedCount} price displays`);
-        if (priceElements.length > 0) {
-            console.log('📍 Updated elements:', priceElements);
-        }
-
-        // FORCE UPDATE: Also update ALL elements with prices that might be in summary/resume
-        // This catches elements that don't have the specific classes but should still be updated
-        setTimeout(() => {
-            document.querySelectorAll('*').forEach(el => {
+        if (formContainer) {
+            formContainer.querySelectorAll('*').forEach(el => {
                 if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
                     const priceRegex = /\d+([.,]\d{2})?\s*€/;
                     if (priceRegex.test(el.innerText)) {
-                        // Skip only option labels and extra controls
+                        const isTotalDisplay = el.closest('.bg-gray-50') ||
+                                             el.className.includes('font-bold') ||
+                                             el.className.includes('text-3xl');
                         const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
                         const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
-                        const isSeatLabel = el.closest('label')?.textContent?.includes('Lugar');
 
-                        // Check if this might be a summary/total element
-                        const parent = el.parentElement;
-                        const isPossibleTotal = parent && (
-                            parent.className.includes('bg-') ||
-                            parent.className.includes('border') ||
-                            parent.className.includes('rounded') ||
-                            parent.className.includes('shadow') ||
-                            el.className.includes('text-') ||
-                            el.innerText.trim().endsWith('€')
-                        );
-
-                        if (!isOptionLabel && !isExtraPrice && !isSeatLabel && isPossibleTotal) {
-                            const currentPrice = el.innerText.match(priceRegex);
-                            if (currentPrice && currentPrice[0] !== formattedPrice + ' €') {
-                                console.log(`🔄 Force updating: "${el.innerText}" -> "${formattedPrice} €"`);
-                                el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
-                            }
+                        if (isTotalDisplay && !isOptionLabel && !isExtraPrice) {
+                            const oldPrice = el.innerText;
+                            el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
+                            updatedCount++;
+                            priceElements.push({
+                                element: el.tagName,
+                                classes: el.className,
+                                oldPrice: oldPrice,
+                                newPrice: el.innerText
+                            });
                         }
                     }
                 }
             });
+        }
+
+        console.log(`✅ Updated ${updatedCount} price displays in form`);
+        if (priceElements.length > 0) {
+            console.log('📍 Updated elements:', priceElements);
+        }
+
+        // FORCE UPDATE: Also update elements within the form that might not have standard classes
+        setTimeout(() => {
+            if (formContainer) {
+                formContainer.querySelectorAll('*').forEach(el => {
+                    if (el.children.length === 0 && el.innerText && el.innerText.includes('€')) {
+                        const priceRegex = /\d+([.,]\d{2})?\s*€/;
+                        if (priceRegex.test(el.innerText)) {
+                            // Skip only option labels and extra controls
+                            const isOptionLabel = el.closest('label') && (el.closest('.space-y-2') || el.closest('.space-y-4'));
+                            const isExtraPrice = el.closest('.sl-extra-qty-control') || el.classList.contains('sl-extra-qty-value');
+                            const isSeatLabel = el.closest('label')?.textContent?.includes('Lugar');
+
+                            // Check if this might be a form price display element
+                            const parent = el.parentElement;
+                            const isPossibleTotal = parent && (
+                                parent.className.includes('bg-') ||
+                                parent.className.includes('border') ||
+                                parent.className.includes('rounded') ||
+                                parent.className.includes('shadow') ||
+                                el.className.includes('text-') ||
+                                el.innerText.trim().endsWith('€')
+                            );
+
+                            if (!isOptionLabel && !isExtraPrice && !isSeatLabel && isPossibleTotal) {
+                                const currentPrice = el.innerText.match(priceRegex);
+                                if (currentPrice && currentPrice[0] !== formattedPrice + ' €') {
+                                    console.log(`🔄 Force updating in form: "${el.innerText}" -> "${formattedPrice} €"`);
+                                    el.innerText = el.innerText.replace(priceRegex, formattedPrice + ' €');
+                                }
+                            }
+                        }
+                    }
+                });
+            }
         }, 100);
     }
 
