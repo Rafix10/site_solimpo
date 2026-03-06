@@ -549,15 +549,6 @@
         const extrasContainer = extrasHeader.parentElement;
         if (!extrasContainer) return;
 
-        // Check if this container has carpet hygiene services (indicating it's tapetes)
-        const extraLabels = Array.from(extrasContainer.querySelectorAll('label'));
-        const isCarpetService = extraLabels.some(label =>
-            label.innerText.includes('Higienização')
-        );
-
-        // Don't add quantity controls to carpet service types
-        if (isCarpetService) return;
-
         const extraItems = extrasContainer.querySelectorAll('.flex.items-start');
 
         extraItems.forEach(item => {
@@ -668,23 +659,7 @@
         // Find and rename "Extras Disponíveis" to "Especificações"
         const extrasHeaders = allHeaders.filter(h => h.innerText.includes('Extras Disponíveis'));
         extrasHeaders.forEach(extrasHeader => {
-            const extrasContainer = extrasHeader.parentElement;
-            if (extrasContainer) {
-                const extraLabels = Array.from(extrasContainer.querySelectorAll('label'));
-                const hasCarpetHygiene = extraLabels.some(label =>
-                    label.innerText.includes('Higienização')
-                );
-
-                // For tapetes service types, keep as "Tipo de serviço"
-                if (hasCarpetHygiene) {
-                    extrasHeader.textContent = 'Tipo de serviço';
-                } else {
-                    // For all others (sofas, colchões, cortinados, vidros), rename to "Especificações"
-                    extrasHeader.textContent = 'Especificações';
-                }
-            } else {
-                extrasHeader.textContent = 'Especificações';
-            }
+            extrasHeader.textContent = 'Especificações';
         });
     }
 
