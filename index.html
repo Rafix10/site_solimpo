@@ -1024,26 +1024,81 @@
     }
 
     // ==========================================
-    // INTERCEPT SUBMIT BUTTON TO FIX PRICING
+    // INTERCEPT SUBMIT TO UPDATE PRICING DATA
     // ==========================================
     function interceptSubmitButton() {
+        // Find the form element
+        const form = document.querySelector('form');
+        if (!form || form.dataset.slIntercepted) return;
+
+        form.dataset.slIntercepted = 'true';
+
+        // Intercept form data before submission
+        form.addEventListener('submit', function(e) {
+            // Don't prevent default - let React handle submission
+            // But inject the correct price into the form data
+
+            const seatsSpan = document.getElementById('custom-seats-value');
+            if (seatsSpan) {
+                const seats = parseInt(seatsSpan.innerText);
+                const basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
+
+                // Find or create hidden input for base price
+                let basePriceInput = form.querySelector('input[name="basePrice"]');
+                if (!basePriceInput) {
+                    basePriceInput = document.createElement('input');
+                    basePriceInput.type = 'hidden';
+                    basePriceInput.name = 'basePrice';
+                    form.appendChild(basePriceInput);
+                }
+
+                // Update the value and trigger React's onChange
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                nativeInputValueSetter.call(basePriceInput, basePrice);
+
+                const inputEvent = new Event('input', { bubbles: true });
+                basePriceInput.dispatchEvent(inputEvent);
+
+                console.log('Injected base price:', basePrice, 'for seats:', seats);
+            }
+        }, false);
+
+        // Also try to intercept the button click
         const buttons = Array.from(document.querySelectorAll('button'));
         const submitBtn = buttons.find(btn =>
             btn.innerText.includes('Adicionar ao Orçamento') ||
             btn.innerText.includes('Orçamento')
         );
 
-        if (!submitBtn || submitBtn.dataset.slIntercepted) return;
+        if (submitBtn && !submitBtn.dataset.slBtnIntercepted) {
+            submitBtn.dataset.slBtnIntercepted = 'true';
 
-        submitBtn.dataset.slIntercepted = 'true';
+            submitBtn.addEventListener('click', function(e) {
+                const seatsSpan = document.getElementById('custom-seats-value');
+                if (seatsSpan) {
+                    const seats = parseInt(seatsSpan.innerText);
+                    const basePrice = PRICING_RULES.sofa.seats[seats] || PRICING_RULES.sofa.base;
 
-        // Add click listener before React's handler
-        submitBtn.addEventListener('click', function(e) {
-            // Force price recalculation right before submission
-            setTimeout(() => {
-                updatePriceDisplay();
-            }, 0);
-        }, true);
+                    console.log('Button clicked - Seats:', seats, 'Base Price:', basePrice);
+
+                    // Try to find and update React's internal price state
+                    // Look for any input that might hold the base price
+                    const allInputs = Array.from(form.querySelectorAll('input[type="number"], input[type="hidden"]'));
+                    allInputs.forEach(inp => {
+                        const val = parseFloat(inp.value);
+                        // If we find an input with a value close to old pricing, update it
+                        if (val === 71 || val === 81 || val === 91 || val === 99 || val === 109) {
+                            console.log('Found potential price input:', inp.name, 'old value:', inp.value);
+                            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                            nativeInputValueSetter.call(inp, basePrice);
+                            const inputEvent = new Event('input', { bubbles: true });
+                            inp.dispatchEvent(inputEvent);
+                            console.log('Updated to:', basePrice);
+                        }
+                    });
+                }
+            }, true);
+        }
     }
 
     // ==========================================
